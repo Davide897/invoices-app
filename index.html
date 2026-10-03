@@ -841,7 +841,6 @@ function openSheet(html){
   if(document.getElementById('lines')) drawLines();
 }
 function closeSheet(){ document.getElementById('sheet').classList.add('hidden'); }
-document.getElementById('sheet').addEventListener('click',e=>{ if(e.target.id==='sheet') closeSheet(); });
 applyLang();
 </script>
 </body>
