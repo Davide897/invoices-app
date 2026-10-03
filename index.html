@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16181d">
+<title>Invoices</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js" integrity="sha384-WgXwGL6fUsYJWNaKJgVbrJKGRQwc1vieh2oy4kw9nXqpNDz3tdSsqEYUgeHD/NuF" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<style>
+:root{
+  --bg:#16181d; --bg2:#1e2128; --card:#23262e; --line:#30343e;
+  --tx:#e8eaf0; --tx2:#9aa0ad; --acc:#4f8cff;
+  --green:#2ecc71; --red:#ff5c5c; --amber:#f5b942;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:16px}
+body{padding-bottom:env(safe-area-inset-bottom)}
+h1,h2,h3{font-weight:700;margin:0}
+button{font-family:inherit;font-size:15px;border:none;border-radius:10px;cursor:pointer;padding:11px 16px}
+input,select,textarea{font-family:inherit;font-size:16px;background:var(--bg2);color:var(--tx);
+  border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+label{display:block;font-size:13px;color:var(--tx2);margin:14px 0 5px}
+.btn-p{background:var(--acc);color:#fff;font-weight:600}
+.btn-g{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+.btn-green{background:var(--green);color:#0c2416;font-weight:700}
+.btn-red{background:transparent;color:var(--red);border:1px solid var(--red)}
+.hidden{display:none!important}
+#topbar{position:sticky;top:0;z-index:20;background:rgba(22,24,29,.92);backdrop-filter:blur(12px);
+  padding:calc(14px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between}
+#topbar h1{font-size:19px;letter-spacing:.5px}
+#tabs{position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;background:rgba(22,24,29,.95);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#tabs button{flex:1;background:none;color:var(--tx2);font-size:11px;padding:9px 0 7px;border-radius:0;
+  display:flex;flex-direction:column;align-items:center;gap:3px}
+#tabs button.on{color:var(--acc)}
+#tabs svg{width:22px;height:22px}
+main{padding:16px;max-width:860px;margin:0 auto 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.chips{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+.chip{padding:7px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);
+  color:var(--tx2);font-size:14px;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1}
+.inv-item{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.inv-item .amt{text-align:right;white-space:nowrap}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.badge.paid{background:rgba(46,204,113,.15);color:var(--green)}
+.badge.unpaid{background:rgba(255,92,92,.15);color:var(--red)}
+.badge.late{background:rgba(245,185,66,.18);color:var(--amber)}
+.grp{margin:22px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--tx2)}
+.banner{background:linear-gradient(135deg,#223,#1b2535);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;margin-bottom:14px}
+.banner b{font-size:18px}
+.lines-tbl{width:100%;border-collapse:collapse;margin-top:6px}
+.lines-tbl td{padding:4px 3px;vertical-align:middle}
+.fab{position:fixed;right:18px;bottom:calc(72px + env(safe-area-inset-bottom));width:56px;height:56px;
+  border-radius:50%;background:var(--acc);color:#fff;font-size:30px;line-height:1;z-index:15;
+  box-shadow:0 6px 18px rgba(79,140,255,.45)}
+.total-box{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-top:12px}
+.total-box .tr{display:flex;justify-content:space-between;padding:3px 0;font-size:15px}
+.total-box .tr.big{font-size:18px;font-weight:700;border-top:1px solid var(--line);margin-top:6px;padding-top:9px}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{text-align:center;font-size:11px;color:var(--tx2);padding:4px 0}
+.cal-day{min-height:58px;background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:4px;font-size:12px;position:relative;cursor:pointer}
+.cal-day.dim{opacity:.35}
+.cal-day.today{border-color:var(--acc)}
+.cal-day .n{color:var(--tx2)}
+.dot{display:block;margin-top:2px;border-radius:5px;font-size:10px;font-weight:700;padding:1px 3px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.dot.paid{background:rgba(46,204,113,.2);color:var(--green)}
+.dot.due{background:rgba(245,185,66,.2);color:var(--amber)}
+.dot.late{background:rgba(255,92,92,.22);color:var(--red)}
+.legend{display:flex;gap:14px;margin-top:12px;font-size:12px;color:var(--tx2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+#login{max-width:380px;margin:12vh auto;padding:0 20px}
+#login h1{font-size:30px;letter-spacing:2px;margin-bottom:4px}
+#login p{color:var(--tx2);margin-top:0}
+.hint{font-size:12.5px;color:var(--tx2);line-height:1.5;margin-top:8px}
+.del-x{background:none;color:var(--red);font-size:18px;padding:4px 8px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet>div{background:var(--bg2);border-radius:18px 18px 0 0;width:100%;max-width:860px;max-height:88vh;
+  overflow-y:auto;padding:18px 18px calc(24px + env(safe-area-inset-bottom))}
+@media(min-width:700px){.sheet{align-items:center}.sheet>div{border-radius:18px;max-height:85vh}}
+.toast{position:fixed;top:calc(16px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  background:#2a2e38;border:1px solid var(--line);color:var(--tx);padding:11px 20px;border-radius:12px;
+  z-index:99;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <h1>INVOICE</h1>
+  <p>A tua app de faturação</p>
+  <label>Email</label><input id="lg-email" type="email" autocomplete="username">
+  <label>Password</label><input id="lg-pass" type="password" autocomplete="current-password">
+  <div style="margin-top:18px" class="row">
+    <button class="btn-p" onclick="doLogin()">Entrar</button>
+    <button class="btn-g" onclick="doSignup()">Criar conta</button>
+  </div>
+  <p class="hint">Primeira vez? Escreve o email e uma password e toca em "Criar conta". Usa os mesmos dados no telemóvel e no PC para veres as mesmas faturas.</p>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div id="topbar"><h1 id="tb-title">Faturas</h1>
+    <button class="btn-g" style="padding:7px 12px;font-size:13px" onclick="logout()">Sair</button></div>
+  <main>
+    <div id="v-inv"></div>
+    <div id="v-cal" class="hidden"></div>
+    <div id="v-cli" class="hidden"></div>
+    <div id="v-set" class="hidden"></div>
+  </main>
+  <button class="fab" id="fab" onclick="fabClick()">+</button>
+  <div id="tabs">
+    <button data-v="inv" class="on" onclick="go('inv')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 012-2z"/></svg>Faturas</button>
+    <button data-v="cal" onclick="go('cal')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/></svg>Calendário</button>
+    <button data-v="cli" onclick="go('cli')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2m18 0v-2a4 4 0 00-3-3.87M15 7a4 4 0 11-8 0 4 4 0 018 0zm1-3.87a4 4 0 010 7.75"/></svg>Clientes</button>
+    <button data-v="set" onclick="go('set')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.82-.33 1.7 1.7 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.51 1.7 1.7 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.33-1.82 1.7 1.7 0 00-1.51-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.51-1 1.7 1.7 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.82.33h0a1.7 1.7 0 001-1.51V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.51h0a1.7 1.7 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.33 1.82v0a1.7 1.7 0 001.51 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg>Definições</button>
+  </div>
+</div>
+
+<div id="sheet" class="sheet hidden"><div id="sheet-body"></div></div>
+
+<script>
+const SB_URL = "https://rauoamwhpttgjjktzatf.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhdW9hbXdocHR0Z2pqa3R6YXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDUwMjAsImV4cCI6MjA5ODU4MTAyMH0.CaKZhROLVzFR2iUWVkbZnuEkYrKYBV6McUWg1fRx7BE";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+let S = { user:null, settings:null, clients:[], invoices:[], view:'inv',
+          fCompany:'', fStatus:'all', calY:0, calM:0, fx:null };
+
+const EUR = v => new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(v||0);
+const GBP = v => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(v||0);
+const fmt = (v,c) => c==='GBP' ? GBP(v) : EUR(v);
+const dmy = d => { if(!d) return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const todayISO = () => new Date().toISOString().slice(0,10);
+function toast(m){ const t=document.createElement('div'); t.className='toast'; t.textContent=m;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+
+// ---------- AUTH ----------
+async function doLogin(){
+  const {data,error} = await sb.auth.signInWithPassword({
+    email:lgv('lg-email'), password:lgv('lg-pass')});
+  if(error){ toast('Erro: '+error.message); return; }
+  boot(data.session);
+}
+async function doSignup(){
+  const {data,error} = await sb.auth.signUp({email:lgv('lg-email'), password:lgv('lg-pass')});
+  if(error){ toast('Erro: '+error.message); return; }
+  if(data.session) boot(data.session); else toast('Conta criada — entra agora.');
+}
+function lgv(id){ return document.getElementById(id).value.trim(); }
+async function logout(){ await sb.auth.signOut(); location.reload(); }
+
+async function boot(session){
+  S.user = session.user;
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const now = new Date(); S.calY=now.getFullYear(); S.calM=now.getMonth();
+  await loadAll(); loadFx(); go('inv');
+}
+async function loadAll(){
+  const [st,cl,inv] = await Promise.all([
+    sb.from('inv_settings').select('*').maybeSingle(),
+    sb.from('inv_clients').select('*').order('company'),
+    sb.from('inv_invoices').select('*').order('issue_date',{ascending:false})
+  ]);
+  S.settings = st.data || {business_name:'',address:'',nif:'',iban:'',extra:'',default_vat:23};
+  S.clients = cl.data||[]; S.invoices = inv.data||[];
+}
+async function loadFx(){
+  try{ const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=EUR');
+    const j = await r.json(); S.fx = j.rates.EUR; }catch(e){ S.fx=null; }
+  if(S.view==='inv') render();
+}
+sb.auth.getSession().then(({data})=>{ if(data.session) boot(data.session); });
+
+// ---------- NAV ----------
+const TITLES = {inv:'Faturas',cal:'Calendário',cli:'Clientes',set:'Definições'};
+function go(v){ S.view=v;
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  ['inv','cal','cli','set'].forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
+  document.getElementById('tb-title').textContent = TITLES[v];
+  document.getElementById('fab').classList.toggle('hidden', v==='cal'||v==='set');
+  render();
+}
+function fabClick(){ if(S.view==='cli') editClient(null); else editInvoice(null); }
+function render(){ if(S.view==='inv') rInvoices(); else if(S.view==='cal') rCalendar();
+  else if(S.view==='cli') rClients(); else rSettings(); }
+
+// ---------- CÁLCULO ----------
+function invTotals(inv){
+  const t = {EUR:{sub:0,vat:0,tot:0}, GBP:{sub:0,vat:0,tot:0}};
+  (inv.lines||[]).forEach(l=>{ const c = l.currency==='GBP'?'GBP':'EUR';
+    t[c].sub += (Number(l.qty)||0)*(Number(l.price)||0); });
+  const r = inv.vat_rate!=null ? Number(inv.vat_rate)/100 : 0;
+  ['EUR','GBP'].forEach(c=>{ t[c].vat = t[c].sub*r; t[c].tot = t[c].sub+t[c].vat; });
+  return t;
+}
+function totalLabel(inv){
+  const t = invTotals(inv); const parts=[];
+  if(t.EUR.tot) parts.push(EUR(t.EUR.tot));
+  if(t.GBP.tot) parts.push(GBP(t.GBP.tot));
+  return parts.join(' + ')||EUR(0);
+}
+function convertedTotal(inv){
+  if(!S.fx) return null; const t = invTotals(inv);
+  return t.EUR.tot + t.GBP.tot*S.fx;
+}
+function isLate(inv){ return inv.status!=='paid' && inv.due_date && inv.due_date < todayISO(); }
+function clientOf(inv){ return S.clients.find(c=>c.id===inv.client_id); }
+
+// ---------- FATURAS (lista) ----------
+function rInvoices(){
+  const el = document.getElementById('v-inv');
+  let list = S.invoices.slice();
+  if(S.fCompany) list = list.filter(i=>i.client_id===S.fCompany);
+  if(S.fStatus!=='all') list = list.filter(i=> S.fStatus==='paid' ? i.status==='paid' : i.status!=='paid');
+
+  // banner resumo
+  const open = S.invoices.filter(i=>i.status!=='paid');
+  let oe=0,og=0,late=0;
+  open.forEach(i=>{ const t=invTotals(i); oe+=t.EUR.tot; og+=t.GBP.tot; if(isLate(i)) late++; });
+  const parts=[]; if(oe)parts.push(EUR(oe)); if(og)parts.push(GBP(og));
+  const banner = `<div class="banner">Por receber: <b>${parts.join(' + ')||EUR(0)}</b>
+    <span style="color:var(--tx2)"> · ${open.length} fatura${open.length===1?'':'s'}</span>
+    ${late?`<div style="color:var(--amber);margin-top:4px">⚠ ${late} em atraso</div>`:''}</div>`;
+
+  const compOpts = S.clients.map(c=>`<option value="${c.id}" ${S.fCompany===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
+  const filters = `
+    <div class="row"><select onchange="S.fCompany=this.value;render()">
+      <option value="">Todas as empresas</option>${compOpts}</select></div>
+    <div class="chips">
+      ${['all','unpaid','paid'].map(s=>`<span class="chip ${S.fStatus===s?'on':''}"
+        onclick="S.fStatus='${s}';render()">${s==='all'?'Todas':s==='paid'?'Pagas':'Não pagas'}</span>`).join('')}
+    </div>`;
+
+  // agrupar por empresa
+  const groups = {};
+  list.forEach(i=>{ const c=clientOf(i); const k=c?c.company:'(sem cliente)';
+    (groups[k]=groups[k]||[]).push(i); });
+  let html = banner+filters;
+  if(!list.length) html += `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">
+    Sem faturas aqui.<br>Toca em <b style="color:var(--acc)">+</b> para criar a primeira.</div>`;
+  Object.keys(groups).sort().forEach(k=>{
+    html += `<div class="grp">${esc(k)}</div>`;
+    groups[k].forEach(i=>{
+      const late = isLate(i);
+      html += `<div class="card inv-item" onclick="editInvoice('${i.id}')">
+        <div><b>${esc(i.number)}</b>
+          <div style="font-size:13px;color:var(--tx2)">${dmy(i.issue_date)}${i.due_date?' · vence '+dmy(i.due_date):''}</div></div>
+        <div class="amt"><div style="font-weight:700">${totalLabel(i)}</div>
+          <span class="badge ${i.status==='paid'?'paid':late?'late':'unpaid'}">
+          ${i.status==='paid'?'PAGA':late?'ATRASADA':'NÃO PAGA'}</span></div></div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+// ---------- EDITOR DE FATURA ----------
+let E = null; // fatura em edição
+function nextNumber(){
+  const y = new Date().getFullYear();
+  let max = 0;
+  S.invoices.forEach(i=>{ const m = (i.number||'').match(new RegExp('^'+y+'-(\\d+)$'));
+    if(m) max = Math.max(max, parseInt(m[1])); });
+  return `${y}-${String(max+1).padStart(3,'0')}`;
+}
+function editInvoice(id){
+  if(!S.clients.length && !id){ toast('Cria primeiro um cliente (separador Clientes).'); go('cli'); return; }
+  E = id ? JSON.parse(JSON.stringify(S.invoices.find(i=>i.id===id)))
+         : { id:null, client_id:S.clients[0].id, number:nextNumber(), issue_date:todayISO(),
+             due_date:'', status:'unpaid', vat_rate:null, lines:[{desc:'',qty:1,price:'',currency:'EUR'}],
+             notes:'', convert_total:false };
+  openSheet(invoiceForm());
+}
+function invoiceForm(){
+  const cliOpts = S.clients.map(c=>`<option value="${c.id}" ${E.client_id===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
+  return `
+  <h2 style="margin-bottom:4px">${E.id?'Fatura '+esc(E.number):'Nova fatura'}</h2>
+  <label>Cliente / Empresa</label><select onchange="E.client_id=this.value">${cliOpts}</select>
+  <div class="row">
+    <div><label>Número</label><input value="${esc(E.number)}" oninput="E.number=this.value"></div>
+    <div><label>Data</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value"></div>
+  </div>
+  <label>Vencimento (para o calendário)</label>
+  <input type="date" value="${E.due_date||''}" onchange="E.due_date=this.value">
+  <label>Linhas</label>
+  <div id="lines"></div>
+  <button class="btn-g" style="margin-top:8px" onclick="E.lines.push({desc:'',qty:1,price:'',currency:'EUR'});drawLines()">+ Linha</button>
+  <div class="row" style="margin-top:14px">
+    <div><label style="margin-top:0">IVA</label>
+      <select onchange="E.vat_rate = this.value===''?null:Number(document.getElementById('vatr').value); drawVat(this.value!=='')" id="vats">
+        <option value="" ${E.vat_rate==null?'selected':''}>Sem IVA</option>
+        <option value="x" ${E.vat_rate!=null?'selected':''}>Com IVA</option></select></div>
+    <div id="vatbox" class="${E.vat_rate==null?'hidden':''}"><label style="margin-top:0">Taxa %</label>
+      <input id="vatr" type="number" value="${E.vat_rate!=null?E.vat_rate:(S.settings.default_vat||23)}"
+        oninput="E.vat_rate=Number(this.value);drawTotals()"></div>
+  </div>
+  <label><input type="checkbox" style="width:auto;margin-right:8px" ${E.convert_total?'checked':''}
+    onchange="E.convert_total=this.checked;drawTotals()">Mostrar total convertido £ → € (câmbio de hoje)</label>
+  <div class="total-box" id="totals"></div>
+  <label>Notas (aparecem no PDF)</label>
+  <textarea rows="2" oninput="E.notes=this.value">${esc(E.notes)}</textarea>
+  <div class="row" style="margin-top:18px">
+    <button class="btn-p" onclick="saveInvoice()">Guardar</button>
+    ${E.id? (E.status==='paid'
+      ? `<button class="btn-g" onclick="setPaid(false)">Marcar NÃO paga</button>`
+      : `<button class="btn-green" onclick="setPaid(true)">Marcar PAGA ✓</button>`) : ''}
+  </div>
+  ${E.id?`
+  <div class="row" style="margin-top:10px">
+    <button class="btn-g" onclick="downloadPDF()">⬇ Descarregar PDF</button>
+    <button class="btn-g" onclick="sharePDF()">✉ Enviar por email</button>
+  </div>
+  <p class="hint">"Enviar por email" abre a folha de partilha do iPhone com o PDF e o texto já escritos — escolhe Mail e os destinatários. No PC descarrega o PDF e usa o botão de email abaixo.</p>
+  <div class="row"><button class="btn-g" onclick="openMailto()">✉ Abrir Mail só com texto (destinatários preenchidos)</button></div>
+  <div class="row" style="margin-top:10px"><button class="btn-red" onclick="delInvoice()">Apagar fatura</button></div>`:''}
+  <div class="row" style="margin-top:10px"><button class="btn-g" onclick="closeSheet()">Fechar</button></div>`;
+}
+function drawVat(on){ document.getElementById('vatbox').classList.toggle('hidden',!on);
+  if(on) E.vat_rate = Number(document.getElementById('vatr').value); drawTotals(); }
+function drawLines(){
+  const el = document.getElementById('lines');
+  el.innerHTML = `<table class="lines-tbl">`+ E.lines.map((l,i)=>`
+    <tr><td style="width:44%"><input placeholder="Descrição" value="${esc(l.desc)}"
+        oninput="E.lines[${i}].desc=this.value"></td>
+      <td style="width:13%"><input type="number" inputmode="decimal" placeholder="Qt" value="${l.qty}"
+        oninput="E.lines[${i}].qty=this.value;drawTotals()"></td>
+      <td style="width:20%"><input type="number" inputmode="decimal" placeholder="Preço" value="${l.price}"
+        oninput="E.lines[${i}].price=this.value;drawTotals()"></td>
+      <td style="width:17%"><select onchange="E.lines[${i}].currency=this.value;drawTotals()">
+        <option ${l.currency!=='GBP'?'selected':''}>EUR</option>
+        <option ${l.currency==='GBP'?'selected':''}>GBP</option></select></td>
+      <td><button class="del-x" onclick="E.lines.splice(${i},1);drawLines()">✕</button></td></tr>`).join('')+`</table>`;
+  drawTotals();
+}
+function drawTotals(){
+  const t = invTotals(E); const box = document.getElementById('totals'); let h='';
+  ['EUR','GBP'].forEach(c=>{ if(t[c].sub||((E.lines||[]).some(l=>l.currency===c))){
+    h += `<div class="tr"><span>Subtotal ${c==='EUR'?'€':'£'}</span><span>${fmt(t[c].sub,c)}</span></div>`;
+    if(E.vat_rate!=null) h += `<div class="tr"><span>IVA ${E.vat_rate}%</span><span>${fmt(t[c].vat,c)}</span></div>`;
+    h += `<div class="tr big"><span>Total ${c==='EUR'?'€':'£'}</span><span>${fmt(t[c].tot,c)}</span></div>`; }});
+  if(E.convert_total){
+    const ct = convertedTotal(E);
+    h += ct!=null ? `<div class="tr big" style="color:var(--acc)"><span>Total convertido (1£=${S.fx.toFixed(4)}€)</span><span>${EUR(ct)}</span></div>`
+      : `<div class="tr" style="color:var(--amber)">Câmbio indisponível (sem internet?)</div>`;
+  }
+  box.innerHTML = h || '<div class="tr">Adiciona linhas para ver totais.</div>';
+}
+async function saveInvoice(){
+  E.lines = (E.lines||[]).filter(l=>l.desc||l.price);
+  const rec = { user_id:S.user.id, client_id:E.client_id, number:E.number,
+    issue_date:E.issue_date||todayISO(), due_date:E.due_date||null, status:E.status,
+    vat_rate:E.vat_rate, lines:E.lines, notes:E.notes, convert_total:E.convert_total,
+    paid_at:E.status==='paid'?(E.paid_at||todayISO()):null };
+  let res;
+  if(E.id) res = await sb.from('inv_invoices').update(rec).eq('id',E.id).select().single();
+  else res = await sb.from('inv_invoices').insert(rec).select().single();
+  if(res.error){ toast('Erro: '+res.error.message); return; }
+  E = res.data;
+  await loadAll(); closeSheet(); render(); toast('Fatura guardada ✓');
+}
+async function setPaid(p){
+  E.status = p?'paid':'unpaid'; E.paid_at = p?todayISO():null;
+  if(E.id){ await sb.from('inv_invoices').update({status:E.status,paid_at:E.paid_at}).eq('id',E.id);
+    await loadAll(); closeSheet(); render(); toast(p?'Marcada como PAGA ✓':'Marcada como não paga'); }
+}
+async function delInvoice(){
+  if(!confirm('Apagar esta fatura? Não dá para desfazer.')) return;
+  await sb.from('inv_invoices').delete().eq('id',E.id);
+  await loadAll(); closeSheet(); render(); toast('Fatura apagada');
+}
+
+// ---------- PDF ----------
+function buildPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm',format:'a4'});
+  const c = clientOf(E)||{}; const st = S.settings; const t = invTotals(E);
+  const W=210, M=18; let y=24;
+  doc.setTextColor(30,33,40); doc.setFont('helvetica','bold'); doc.setFontSize(26);
+  doc.text('INVOICE', M, y);
+  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(110,115,125);
+  doc.text(`Nº ${E.number}`, W-M, y-6, {align:'right'});
+  doc.text(`Data: ${dmy(E.issue_date)}`, W-M, y-1, {align:'right'});
+  if(E.due_date) doc.text(`Vencimento: ${dmy(E.due_date)}`, W-M, y+4, {align:'right'});
+  y+=14; doc.setDrawColor(220,222,228); doc.line(M,y,W-M,y); y+=9;
+  doc.setTextColor(110,115,125); doc.setFontSize(8.5);
+  doc.text('DE', M, y); doc.text('PARA', W/2+4, y); y+=5;
+  doc.setTextColor(30,33,40); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+  doc.text(st.business_name||'', M, y); doc.text(c.company||'', W/2+4, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(70,75,85);
+  let yl=y, yr=y;
+  (st.address||'').split('\n').forEach(l=>{ yl+=4.6; doc.text(l,M,yl); });
+  if(st.nif){ yl+=4.6; doc.text('NIF: '+st.nif, M, yl); }
+  [(c.contact_name||''),(c.address||'')].join('\n').split('\n').filter(Boolean).forEach(l=>{ yr+=4.6; doc.text(l,W/2+4,yr); });
+  if(c.nif){ yr+=4.6; doc.text('NIF/VAT: '+c.nif, W/2+4, yr); }
+  y = Math.max(yl,yr)+12;
+  // tabela
+  doc.setFillColor(243,244,247); doc.rect(M,y-5,W-2*M,8,'F');
+  doc.setFontSize(8.5); doc.setTextColor(110,115,125); doc.setFont('helvetica','bold');
+  doc.text('DESCRIÇÃO',M+2,y); doc.text('QT',W-M-58,y,{align:'right'});
+  doc.text('PREÇO',W-M-32,y,{align:'right'}); doc.text('TOTAL',W-M-2,y,{align:'right'});
+  y+=8; doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(30,33,40);
+  (E.lines||[]).forEach(l=>{
+    const tot=(Number(l.qty)||0)*(Number(l.price)||0);
+    doc.text(String(l.desc||''), M+2, y, {maxWidth:W-2*M-70});
+    doc.text(String(l.qty||0), W-M-58, y, {align:'right'});
+    doc.text(fmt(Number(l.price)||0,l.currency), W-M-32, y, {align:'right'});
+    doc.text(fmt(tot,l.currency), W-M-2, y, {align:'right'});
+    y+=7; doc.setDrawColor(238,239,243); doc.line(M,y-4.5,W-M,y-4.5);
+    if(y>250){ doc.addPage(); y=24; }
+  });
+  y+=4;
+  const tx=(lbl,val,big)=>{ doc.setFont('helvetica',big?'bold':'normal'); doc.setFontSize(big?12:10);
+    doc.setTextColor(big?30:90,big?33:95,big?40:105);
+    doc.text(lbl, W-M-60, y); doc.text(val, W-M-2, y, {align:'right'}); y+=big?7.5:6; };
+  ['EUR','GBP'].forEach(cc=>{ if(t[cc].tot){
+    if(E.vat_rate!=null){ tx(`Subtotal ${cc==='EUR'?'€':'£'}`, fmt(t[cc].sub,cc));
+      tx(`IVA ${E.vat_rate}%`, fmt(t[cc].vat,cc)); }
+    tx(`TOTAL ${cc==='EUR'?'€':'£'}`, fmt(t[cc].tot,cc), true); }});
+  if(E.convert_total && S.fx && t.GBP.tot){
+    tx(`Total em € (1£=${S.fx.toFixed(4)}€)`, EUR(convertedTotal(E)), true); }
+  y+=6;
+  if(E.status==='paid'){ doc.setTextColor(46,160,100); doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('✓ PAGA / PAID', M, y); y+=8; }
+  doc.setTextColor(90,95,105); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  if(E.notes){ doc.text(E.notes, M, y, {maxWidth:W-2*M}); y+=10; }
+  if(st.iban){ doc.text('Pagamento / Payment: '+st.iban, M, 280); }
+  if(st.extra){ doc.text(st.extra, M, 285); }
+  return doc;
+}
+function pdfName(){ const c=clientOf(E); return `Invoice_${E.number.replace(/[^\w-]/g,'_')}_${(c?c.company:'').replace(/[^\w]/g,'')}.pdf`; }
+function downloadPDF(){ buildPDF().save(pdfName()); toast('PDF gerado ⬇'); }
+
+// ---------- EMAIL ----------
+function defaultTemplate(lang){
+  return lang==='pt'
+   ? `Boa tarde,\n\nSegue em anexo a fatura {numero}, no valor de {total}, com vencimento a {vencimento}.\n\nQualquer questão, estou ao dispor.\n\nCumprimentos,\n{empresa}`
+   : `Hello,\n\nPlease find attached invoice {numero} for {total}, due on {vencimento}.\n\nShould you have any questions, feel free to reach out.\n\nBest regards,\n{empresa}`;
+}
+function buildEmail(){
+  const c = clientOf(E)||{}; const lang = c.language==='pt'?'pt':'en';
+  let body = (c.email_template&&c.email_template.trim()) ? c.email_template : defaultTemplate(lang);
+  const total = E.convert_total&&S.fx ? EUR(convertedTotal(E)) : totalLabel(E);
+  body = body.replaceAll('{numero}',E.number).replaceAll('{total}',total)
+    .replaceAll('{vencimento}',dmy(E.due_date)).replaceAll('{empresa}',S.settings.business_name||'')
+    .replaceAll('{cliente}',c.company||'');
+  const subject = lang==='pt' ? `Fatura ${E.number} — ${S.settings.business_name||''}`
+                              : `Invoice ${E.number} — ${S.settings.business_name||''}`;
+  return {subject, body, emails:(c.emails||[])};
+}
+async function sharePDF(){
+  const m = buildEmail();
+  const blob = buildPDF().output('blob');
+  const file = new File([blob], pdfName(), {type:'application/pdf'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:m.subject, text:m.body}); }
+    catch(e){ /* cancelado */ }
+  } else {
+    buildPDF().save(pdfName()); openMailto();
+    toast('PDF descarregado — anexa-o no email que abriu.');
+  }
+}
+function openMailto(){
+  const m = buildEmail();
+  location.href = `mailto:${m.emails.join(',')}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
+}
+
+// ---------- CALENDÁRIO ----------
+function rCalendar(){
+  const el = document.getElementById('v-cal');
+  const y=S.calY, m=S.calM;
+  const first = new Date(y,m,1); const start=(first.getDay()+6)%7; // seg=0
+  const days = new Date(y,m+1,0).getDate();
+  const mn = first.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+  const byDay = {};
+  S.invoices.forEach(i=>{ if(!i.due_date) return;
+    const d=i.due_date; if(d.slice(0,7)===`${y}-${String(m+1).padStart(2,'0')}`)
+      (byDay[parseInt(d.slice(8))]=byDay[parseInt(d.slice(8))]||[]).push(i); });
+  let grid = ['S','T','Q','Q','S','S','D'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<start;i++) grid+=`<div></div>`;
+  const td = todayISO();
+  for(let d=1;d<=days;d++){
+    const iso = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const invs = byDay[d]||[];
+    grid += `<div class="cal-day ${iso===td?'today':''}" ${invs.length?`onclick="dayDetail('${iso}')"`:''}>
+      <span class="n">${d}</span>
+      ${invs.map(i=>{ const cls = i.status==='paid'?'paid': iso<td?'late':'due';
+        return `<span class="dot ${cls}">${totalLabel(i)}</span>`; }).join('')}</div>`;
+  }
+  // resumo do mês
+  let me=0,mg=0,ml=0;
+  Object.values(byDay).flat().forEach(i=>{ if(i.status!=='paid'){ const t=invTotals(i);
+    me+=t.EUR.tot; mg+=t.GBP.tot; if(isLate(i))ml++; }});
+  const p=[]; if(me)p.push(EUR(me)); if(mg)p.push(GBP(mg));
+  el.innerHTML = `
+  <div class="banner">Este mês por receber: <b>${p.join(' + ')||'nada 🎉'}</b>
+    ${ml?`<div style="color:var(--amber);margin-top:4px">⚠ ${ml} em atraso</div>`:''}</div>
+  <div class="cal-head">
+    <button class="btn-g" onclick="calNav(-1)">‹</button>
+    <h3 style="text-transform:capitalize">${mn}</h3>
+    <button class="btn-g" onclick="calNav(1)">›</button></div>
+  <div class="cal-grid">${grid}</div>
+  <div class="legend"><span><i style="background:var(--green)"></i>Paga</span>
+    <span><i style="background:var(--amber)"></i>A vencer</span>
+    <span><i style="background:var(--red)"></i>Em atraso</span></div>`;
+}
+function calNav(d){ S.calM+=d; if(S.calM<0){S.calM=11;S.calY--;} if(S.calM>11){S.calM=0;S.calY++;} rCalendar(); }
+function dayDetail(iso){
+  const invs = S.invoices.filter(i=>i.due_date===iso);
+  openSheet(`<h2>Vencem a ${dmy(iso)}</h2>`+ invs.map(i=>{ const c=clientOf(i);
+    return `<div class="card inv-item" onclick="closeSheet();editInvoice('${i.id}')">
+      <div><b>${esc(i.number)}</b><div style="font-size:13px;color:var(--tx2)">${esc(c?c.company:'')}</div></div>
+      <div class="amt"><div style="font-weight:700">${totalLabel(i)}</div>
+      <span class="badge ${i.status==='paid'?'paid':isLate(i)?'late':'unpaid'}">${i.status==='paid'?'PAGA':isLate(i)?'ATRASADA':'NÃO PAGA'}</span></div></div>`;}).join('')
+    +`<div class="row" style="margin-top:12px"><button class="btn-g" onclick="closeSheet()">Fechar</button></div>`);
+}
+
+// ---------- CLIENTES ----------
+let C = null;
+function rClients(){
+  const el = document.getElementById('v-cli');
+  el.innerHTML = (S.clients.length? '' : `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">
+    Sem clientes.<br>Toca em <b style="color:var(--acc)">+</b> para criar o primeiro.</div>`)
+  + S.clients.map(c=>`<div class="card inv-item" onclick="editClient('${c.id}')">
+      <div><b>${esc(c.company)}</b>
+        <div style="font-size:13px;color:var(--tx2)">${esc((c.emails||[]).join(', '))||'sem email'}</div></div>
+      <span class="badge" style="background:var(--bg2);color:var(--tx2)">${c.language==='pt'?'🇵🇹 PT':'🇬🇧 EN'}</span>
+    </div>`).join('');
+}
+function editClient(id){
+  C = id ? JSON.parse(JSON.stringify(S.clients.find(c=>c.id===id)))
+         : {id:null,company:'',contact_name:'',emails:[],language:'en',email_template:'',address:'',nif:''};
+  openSheet(`
+  <h2>${C.id?'Editar cliente':'Novo cliente'}</h2>
+  <label>Empresa *</label><input value="${esc(C.company)}" oninput="C.company=this.value">
+  <label>Nome de contacto</label><input value="${esc(C.contact_name)}" oninput="C.contact_name=this.value">
+  <label>Emails (separados por vírgula — podem ser vários)</label>
+  <input value="${esc((C.emails||[]).join(', '))}" oninput="C.emails=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
+  <label>Morada (opcional, aparece no PDF)</label><input value="${esc(C.address)}" oninput="C.address=this.value">
+  <label>NIF / VAT (opcional)</label><input value="${esc(C.nif)}" oninput="C.nif=this.value">
+  <label>Língua dos emails e do texto</label>
+  <select onchange="C.language=this.value">
+    <option value="en" ${C.language!=='pt'?'selected':''}>Inglês</option>
+    <option value="pt" ${C.language==='pt'?'selected':''}>Português</option></select>
+  <label>Texto do email para este cliente (escreves uma vez, fica gravado)</label>
+  <textarea rows="7" placeholder="Deixa vazio para usar o texto automático na língua escolhida."
+    oninput="C.email_template=this.value">${esc(C.email_template)}</textarea>
+  <p class="hint">Podes usar: {numero} {total} {vencimento} {empresa} {cliente} — são substituídos automaticamente em cada fatura.</p>
+  <div class="row" style="margin-top:14px">
+    <button class="btn-p" onclick="saveClient()">Guardar</button>
+    <button class="btn-g" onclick="closeSheet()">Fechar</button></div>
+  ${C.id?`<div class="row" style="margin-top:10px"><button class="btn-red" onclick="delClient()">Apagar cliente</button></div>`:''}`);
+}
+async function saveClient(){
+  if(!C.company.trim()){ toast('A empresa precisa de nome.'); return; }
+  const rec = {user_id:S.user.id, company:C.company, contact_name:C.contact_name,
+    emails:C.emails, language:C.language, email_template:C.email_template, address:C.address, nif:C.nif};
+  let res = C.id ? await sb.from('inv_clients').update(rec).eq('id',C.id)
+                 : await sb.from('inv_clients').insert(rec);
+  if(res.error){ toast('Erro: '+res.error.message); return; }
+  await loadAll(); closeSheet(); render(); toast('Cliente guardado ✓');
+}
+async function delClient(){
+  if(!confirm('Apagar este cliente? As faturas dele ficam sem cliente associado.')) return;
+  await sb.from('inv_clients').delete().eq('id',C.id);
+  await loadAll(); closeSheet(); render();
+}
+
+// ---------- DEFINIÇÕES ----------
+function rSettings(){
+  const st = S.settings;
+  document.getElementById('v-set').innerHTML = `
+  <div class="card">
+    <h3 style="margin-bottom:4px">Os teus dados (aparecem em todos os PDFs)</h3>
+    <label>Nome / Empresa</label><input id="st-name" value="${esc(st.business_name)}">
+    <label>Morada (podes usar várias linhas)</label><textarea id="st-addr" rows="2">${esc(st.address)}</textarea>
+    <label>NIF (opcional)</label><input id="st-nif" value="${esc(st.nif)}">
+    <label>IBAN / dados de pagamento</label><input id="st-iban" value="${esc(st.iban)}">
+    <label>Linha extra no rodapé (opcional)</label><input id="st-extra" value="${esc(st.extra)}">
+    <label>Taxa de IVA por defeito %</label><input id="st-vat" type="number" value="${st.default_vat??23}">
+    <div class="row" style="margin-top:16px"><button class="btn-p" onclick="saveSettings()">Guardar</button></div>
+  </div>
+  <p class="hint">Instalar no iPhone: abre este site no Safari → botão Partilhar → "Adicionar ao ecrã principal". Fica como uma app.</p>`;
+}
+async function saveSettings(){
+  const g = id=>document.getElementById(id).value;
+  const rec = {user_id:S.user.id, business_name:g('st-name'), address:g('st-addr'),
+    nif:g('st-nif'), iban:g('st-iban'), extra:g('st-extra'), default_vat:Number(g('st-vat'))||0,
+    updated_at:new Date().toISOString()};
+  const res = await sb.from('inv_settings').upsert(rec);
+  if(res.error){ toast('Erro: '+res.error.message); return; }
+  S.settings = rec; toast('Definições guardadas ✓');
+}
+
+// ---------- SHEET ----------
+function openSheet(html){
+  document.getElementById('sheet-body').innerHTML = html;
+  document.getElementById('sheet').classList.remove('hidden');
+  if(document.getElementById('lines')) drawLines();
+}
+function closeSheet(){ document.getElementById('sheet').classList.add('hidden'); }
+document.getElementById('sheet').addEventListener('click',e=>{ if(e.target.id==='sheet') closeSheet(); });
+</script>
+</body>
+</html>

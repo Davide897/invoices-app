@@ -1,0 +1,9 @@
+{
+  "name": "Invoices",
+  "short_name": "Invoices",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#16181d",
+  "theme_color": "#16181d",
+  "icons": [{ "src": "icon.png", "sizes": "180x180", "type": "image/png" }]
+}
