@@ -152,15 +152,33 @@ function toast(m){ const t=document.createElement('div'); t.className='toast'; t
   document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
 
 // ---------- AUTH ----------
+function authPT(msg){
+  const m = (msg||'').toLowerCase();
+  if(m.includes('anonymous')) return 'Preenche o email e a password primeiro.';
+  if(m.includes('invalid login credentials')) return 'Email ou password errados. Se é a primeira vez, usa "Criar conta".';
+  if(m.includes('already registered')) return 'Esse email já tem conta — usa "Entrar".';
+  if(m.includes('at least 6')) return 'A password precisa de pelo menos 6 caracteres.';
+  if(m.includes('valid email') || m.includes('invalid format')) return 'Esse email não parece válido.';
+  if(m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas seguidas — espera um minuto e tenta outra vez.';
+  return 'Erro: '+msg;
+}
+function authFields(){
+  const email = lgv('lg-email'), pass = lgv('lg-pass');
+  if(!email || !pass){ toast('Preenche o email e a password primeiro.'); return null; }
+  if(!/^\S+@\S+\.\S+$/.test(email)){ toast('Esse email não parece válido.'); return null; }
+  if(pass.length < 6){ toast('A password precisa de pelo menos 6 caracteres.'); return null; }
+  return {email, password: pass};
+}
 async function doLogin(){
-  const {data,error} = await sb.auth.signInWithPassword({
-    email:lgv('lg-email'), password:lgv('lg-pass')});
-  if(error){ toast('Erro: '+error.message); return; }
+  const f = authFields(); if(!f) return;
+  const {data,error} = await sb.auth.signInWithPassword(f);
+  if(error){ toast(authPT(error.message)); return; }
   boot(data.session);
 }
 async function doSignup(){
-  const {data,error} = await sb.auth.signUp({email:lgv('lg-email'), password:lgv('lg-pass')});
-  if(error){ toast('Erro: '+error.message); return; }
+  const f = authFields(); if(!f) return;
+  const {data,error} = await sb.auth.signUp(f);
+  if(error){ toast(authPT(error.message)); return; }
   if(data.session) boot(data.session); else toast('Conta criada — entra agora.');
 }
 function lgv(id){ return document.getElementById(id).value.trim(); }
