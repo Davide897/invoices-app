@@ -145,7 +145,7 @@ const SB_URL = "https://rauoamwhpttgjjktzatf.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhdW9hbXdocHR0Z2pqa3R6YXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDUwMjAsImV4cCI6MjA5ODU4MTAyMH0.CaKZhROLVzFR2iUWVkbZnuEkYrKYBV6McUWg1fRx7BE";
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
-let S = { user:null, settings:null, clients:[], invoices:[], view:'inv',
+let S = { user:null, settings:null, clients:[], invoices:[], banks:[], view:'inv',
           fCompany:'', fStatus:'all', calY:0, calM:0, fx:null };
 
 // ---------- IDIOMA ----------
@@ -192,7 +192,16 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   errCreds:'Email ou password errados. Se é a primeira vez, usa "Criar conta".',
   errExists:'Esse email já tem conta — usa "Entrar".',
   errRate:'Muitas tentativas seguidas — espera um minuto e tenta outra vez.',
-  created:'Conta criada — entra agora.'},
+  created:'Conta criada — entra agora.',
+  banksTitle:'Contas bancárias',addBank:'+ Adicionar conta bancária',
+  bankLabel:'Nome da conta (só para ti, ex: "Wise EUR", "Banco PT")',
+  bankHolder:'Nome do titular (Name)',bankName:'Banco (opcional)',bankIban:'IBAN',
+  bankSwift:'SWIFT / BIC (é o mesmo código)',bankExtra:'Linha extra (opcional, ex: sort code UK)',
+  editBank:'Editar conta bancária',newBank:'Nova conta bancária',delBank:'Apagar conta',
+  confirmDelBank:'Apagar esta conta bancária? As faturas que a usavam ficam sem conta associada.',
+  savedBank:'Conta bancária guardada ✓',needBankLabel:'Dá um nome à conta (ex: "Wise EUR").',
+  bankSelLbl:'Conta bancária para receber (aparece no PDF)',noBank:'— sem conta no PDF —',
+  noBanksHint:'Ainda não tens contas bancárias. Adiciona-as nas Definições para apareceram no PDF.'},
 en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
   hintLogin:'First time? Type your email and a password and tap "Create account". Use the same details on your phone and PC to see the same invoices.',
   logout:'Sign out',tInv:'Invoices',tCal:'Calendar',tCli:'Clients',tSet:'Settings',
@@ -235,7 +244,16 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   errCreds:'Wrong email or password. If this is your first time, use "Create account".',
   errExists:'That email already has an account — use "Sign in".',
   errRate:'Too many attempts — wait a minute and try again.',
-  created:'Account created — sign in now.'}
+  created:'Account created — sign in now.',
+  banksTitle:'Bank accounts',addBank:'+ Add bank account',
+  bankLabel:'Account name (just for you, e.g. "Wise EUR", "PT bank")',
+  bankHolder:'Account holder (Name)',bankName:'Bank (optional)',bankIban:'IBAN',
+  bankSwift:'SWIFT / BIC (same code)',bankExtra:'Extra line (optional, e.g. UK sort code)',
+  editBank:'Edit bank account',newBank:'New bank account',delBank:'Delete account',
+  confirmDelBank:'Delete this bank account? Invoices using it will be left without one.',
+  savedBank:'Bank account saved ✓',needBankLabel:'Give the account a name (e.g. "Wise EUR").',
+  bankSelLbl:'Bank account to receive payment (shown on the PDF)',noBank:'— no account on PDF —',
+  noBanksHint:'No bank accounts yet. Add them in Settings so they appear on the PDF.'}
 };
 let L = localStorage.getItem('inv_lang') || 'pt';
 const t = k => (I18N[L] && I18N[L][k]) ?? I18N.pt[k] ?? k;
@@ -303,13 +321,19 @@ async function boot(session){
   await loadAll(); loadFx(); go('inv');
 }
 async function loadAll(){
-  const [st,cl,inv] = await Promise.all([
+  const [st,cl,inv,bk] = await Promise.all([
     sb.from('inv_settings').select('*').maybeSingle(),
     sb.from('inv_clients').select('*').order('company'),
-    sb.from('inv_invoices').select('*').order('issue_date',{ascending:false})
+    sb.from('inv_invoices').select('*').order('issue_date',{ascending:false}),
+    sb.from('inv_banks').select('*').order('created_at')
   ]);
   S.settings = st.data || {business_name:'',address:'',nif:'',iban:'',extra:'',default_vat:23};
-  S.clients = cl.data||[]; S.invoices = inv.data||[];
+  S.clients = cl.data||[]; S.invoices = inv.data||[]; S.banks = bk.data||[];
+  if(!S.banks.length && (S.settings.iban||'').trim()){
+    const r = await sb.from('inv_banks').insert({user_id:S.user.id, label:'Principal',
+      holder:S.settings.business_name||'', iban:S.settings.iban}).select();
+    if(r.data) S.banks = r.data;
+  }
 }
 async function loadFx(){
   try{ const r = await fetch('https://api.frankfurter.dev/v1/latest?base=GBP&symbols=EUR');
@@ -416,7 +440,7 @@ function editInvoice(id){
   E = id ? JSON.parse(JSON.stringify(S.invoices.find(i=>i.id===id)))
          : { id:null, client_id:S.clients[0].id, number:nextNumber(), issue_date:todayISO(),
              due_date:'', status:'unpaid', vat_rate:null, lines:[{desc:'',qty:1,price:'',currency:'EUR'}],
-             notes:'', convert_total:false };
+             notes:'', convert_total:false, bank_id:(S.banks&&S.banks[0]&&S.banks[0].id)||null };
   openSheet(invoiceForm());
 }
 function invoiceForm(){
@@ -445,6 +469,11 @@ function invoiceForm(){
   <label><input type="checkbox" style="width:auto;margin-right:8px" ${E.convert_total?'checked':''}
     onchange="E.convert_total=this.checked;drawTotals()">${t('convertLbl')}</label>
   <div class="total-box" id="totals"></div>
+  <label>${t('bankSelLbl')}</label>
+  ${(S.banks||[]).length ? `<select onchange="E.bank_id=this.value||null">
+      <option value="" ${!E.bank_id?'selected':''}>${t('noBank')}</option>
+      ${S.banks.map(b=>`<option value="${b.id}" ${E.bank_id===b.id?'selected':''}>${esc(b.label)}${b.iban?' · '+esc(b.iban.slice(0,8))+'…':''}</option>`).join('')}
+    </select>` : `<p class="hint" style="margin-top:0">${t('noBanksHint')}</p>`}
   <label>${t('notesLbl')}</label>
   <textarea rows="2" oninput="E.notes=this.value">${esc(E.notes)}</textarea>
   <div class="row" style="margin-top:18px">
@@ -498,7 +527,7 @@ async function saveInvoice(){
   const rec = { user_id:S.user.id, client_id:E.client_id, number:E.number,
     issue_date:E.issue_date||todayISO(), due_date:E.due_date||null, status:E.status,
     vat_rate:E.vat_rate, lines:E.lines, notes:E.notes, convert_total:E.convert_total,
-    paid_at:E.status==='paid'?(E.paid_at||todayISO()):null };
+    bank_id:E.bank_id||null, paid_at:E.status==='paid'?(E.paid_at||todayISO()):null };
   let res;
   if(E.id) res = await sb.from('inv_invoices').update(rec).eq('id',E.id).select().single();
   else res = await sb.from('inv_invoices').insert(rec).select().single();
@@ -580,8 +609,19 @@ function buildPDF(){
     doc.text(P.paid, M, y); y+=8; }
   doc.setTextColor(90,95,105); doc.setFontSize(9); doc.setFont('helvetica','normal');
   if(E.notes){ doc.text(E.notes, M, y, {maxWidth:W-2*M}); y+=10; }
-  if(st.iban){ doc.text(P.pay+': '+st.iban, M, 280); }
-  if(st.extra){ doc.text(st.extra, M, 285); }
+  const bank = (S.banks||[]).find(b=>b.id===E.bank_id);
+  const bl = [];
+  if(bank){
+    bl.push(P.pay+(bank.bank_name?' — '+bank.bank_name:'')+':');
+    if(bank.holder) bl.push((c.language==='pt'?'Titular: ':'Name: ')+bank.holder);
+    if(bank.iban)   bl.push('IBAN: '+bank.iban);
+    if(bank.swift)  bl.push('SWIFT/BIC: '+bank.swift);
+    if(bank.extra)  bl.push(bank.extra);
+  } else if(st.iban){ bl.push(P.pay+': '+st.iban); }
+  if(st.extra) bl.push(st.extra);
+  let by = 288 - bl.length*4.6;
+  doc.setDrawColor(230,232,238); if(bl.length) doc.line(M, by-4, W-M, by-4);
+  bl.forEach(l=>{ doc.text(l, M, by); by+=4.6; });
   return doc;
 }
 function pdfName(){ const c=clientOf(E); return `Invoice_${E.number.replace(/[^\w-]/g,'_')}_${(c?c.company:'').replace(/[^\w]/g,'')}.pdf`; }
@@ -737,21 +777,61 @@ function rSettings(){
     <label>${t('setName')}</label><input id="st-name" value="${esc(st.business_name)}">
     <label>${t('setAddr')}</label><textarea id="st-addr" rows="2">${esc(st.address)}</textarea>
     <label>${t('setNif')}</label><input id="st-nif" value="${esc(st.nif)}">
-    <label>${t('setIban')}</label><input id="st-iban" value="${esc(st.iban)}">
     <label>${t('setExtra')}</label><input id="st-extra" value="${esc(st.extra)}">
     <label>${t('setVat')}</label><input id="st-vat" type="number" value="${st.default_vat??23}">
     <div class="row" style="margin-top:16px"><button class="btn-p" onclick="saveSettings()">${t('save')}</button></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:4px">${t('banksTitle')}</h3>
+    ${(S.banks||[]).map(b=>`<div class="card inv-item" style="margin-top:10px" onclick="editBank('${b.id}')">
+      <div><b>${esc(b.label)}</b>
+        <div style="font-size:13px;color:var(--tx2)">${esc(b.iban||'')}${b.swift?' · '+esc(b.swift):''}</div></div>
+      <span style="color:var(--tx2)">›</span></div>`).join('')}
+    <button class="btn-g" style="margin-top:12px" onclick="editBank(null)">${t('addBank')}</button>
   </div>
   <p class="hint">${t('installHint')}</p>`;
 }
 async function saveSettings(){
   const g = id=>document.getElementById(id).value;
   const rec = {user_id:S.user.id, business_name:g('st-name'), address:g('st-addr'),
-    nif:g('st-nif'), iban:g('st-iban'), extra:g('st-extra'), default_vat:Number(g('st-vat'))||0,
+    nif:g('st-nif'), iban:S.settings.iban||'', extra:g('st-extra'), default_vat:Number(g('st-vat'))||0,
     updated_at:new Date().toISOString()};
   const res = await sb.from('inv_settings').upsert(rec);
   if(res.error){ toast('Erro: '+res.error.message); return; }
   S.settings = rec; toast(t('savedSet'));
+}
+
+// ---------- CONTAS BANCÁRIAS ----------
+let B = null;
+function editBank(id){
+  B = id ? JSON.parse(JSON.stringify(S.banks.find(b=>b.id===id)))
+         : {id:null,label:'',holder:S.settings.business_name||'',bank_name:'',iban:'',swift:'',extra:''};
+  openSheet(`
+  <h2>${B.id?t('editBank'):t('newBank')}</h2>
+  <label>${t('bankLabel')}</label><input value="${esc(B.label)}" oninput="B.label=this.value">
+  <label>${t('bankHolder')}</label><input value="${esc(B.holder)}" oninput="B.holder=this.value">
+  <label>${t('bankName')}</label><input value="${esc(B.bank_name)}" oninput="B.bank_name=this.value">
+  <label>${t('bankIban')}</label><input value="${esc(B.iban)}" oninput="B.iban=this.value" autocapitalize="characters">
+  <label>${t('bankSwift')}</label><input value="${esc(B.swift)}" oninput="B.swift=this.value" autocapitalize="characters">
+  <label>${t('bankExtra')}</label><input value="${esc(B.extra)}" oninput="B.extra=this.value">
+  <div class="row" style="margin-top:14px">
+    <button class="btn-p" onclick="saveBank()">${t('save')}</button>
+    <button class="btn-g" onclick="closeSheet()">${t('closeBtn')}</button></div>
+  ${B.id?`<div class="row" style="margin-top:10px"><button class="btn-red" onclick="delBank()">${t('delBank')}</button></div>`:''}`);
+}
+async function saveBank(){
+  if(!B.label.trim()){ toast(t('needBankLabel')); return; }
+  const rec = {user_id:S.user.id, label:B.label, holder:B.holder, bank_name:B.bank_name,
+    iban:(B.iban||'').replace(/\s+/g,' ').trim(), swift:(B.swift||'').trim(), extra:B.extra};
+  let res = B.id ? await sb.from('inv_banks').update(rec).eq('id',B.id)
+                 : await sb.from('inv_banks').insert(rec);
+  if(res.error){ toast('Erro: '+res.error.message); return; }
+  await loadAll(); closeSheet(); render(); toast(t('savedBank'));
+}
+async function delBank(){
+  if(!confirm(t('confirmDelBank'))) return;
+  await sb.from('inv_banks').delete().eq('id',B.id);
+  await loadAll(); closeSheet(); render();
 }
 
 // ---------- SHEET ----------
