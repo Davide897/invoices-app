@@ -102,21 +102,27 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
 
 <!-- LOGIN -->
 <div id="login">
-  <h1>INVOICE</h1>
-  <p>A tua app de faturação</p>
-  <label>Email</label><input id="lg-email" type="email" autocomplete="username">
-  <label>Password</label><input id="lg-pass" type="password" autocomplete="current-password">
-  <div style="margin-top:18px" class="row">
-    <button class="btn-p" onclick="doLogin()">Entrar</button>
-    <button class="btn-g" onclick="doSignup()">Criar conta</button>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <h1>INVOICE</h1>
+    <div class="chips" style="margin:0">
+      <span class="chip" id="lang-pt" onclick="setLang('pt')">PT</span>
+      <span class="chip" id="lang-en" onclick="setLang('en')">EN</span>
+    </div>
   </div>
-  <p class="hint">Primeira vez? Escreve o email e uma password e toca em "Criar conta". Usa os mesmos dados no telemóvel e no PC para veres as mesmas faturas.</p>
+  <p id="lg-tag"></p>
+  <label id="lg-l-email"></label><input id="lg-email" type="email" autocomplete="username">
+  <label id="lg-l-pass"></label><input id="lg-pass" type="password" autocomplete="current-password">
+  <div style="margin-top:18px" class="row">
+    <button class="btn-p" id="lg-btn-in" onclick="doLogin()"></button>
+    <button class="btn-g" id="lg-btn-up" onclick="doSignup()"></button>
+  </div>
+  <p class="hint" id="lg-hint"></p>
 </div>
 
 <!-- APP -->
 <div id="app" class="hidden">
-  <div id="topbar"><h1 id="tb-title">Faturas</h1>
-    <button class="btn-g" style="padding:7px 12px;font-size:13px" onclick="logout()">Sair</button></div>
+  <div id="topbar"><h1 id="tb-title"></h1>
+    <button class="btn-g" id="btn-logout" style="padding:7px 12px;font-size:13px" onclick="logout()"></button></div>
   <main>
     <div id="v-inv"></div>
     <div id="v-cal" class="hidden"></div>
@@ -125,10 +131,10 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
   </main>
   <button class="fab" id="fab" onclick="fabClick()">+</button>
   <div id="tabs">
-    <button data-v="inv" class="on" onclick="go('inv')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 012-2z"/></svg>Faturas</button>
-    <button data-v="cal" onclick="go('cal')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/></svg>Calendário</button>
-    <button data-v="cli" onclick="go('cli')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2m18 0v-2a4 4 0 00-3-3.87M15 7a4 4 0 11-8 0 4 4 0 018 0zm1-3.87a4 4 0 010 7.75"/></svg>Clientes</button>
-    <button data-v="set" onclick="go('set')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.82-.33 1.7 1.7 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.51 1.7 1.7 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.33-1.82 1.7 1.7 0 00-1.51-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.51-1 1.7 1.7 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.82.33h0a1.7 1.7 0 001-1.51V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.51h0a1.7 1.7 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.33 1.82v0a1.7 1.7 0 001.51 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg>Definições</button>
+    <button data-v="inv" class="on" onclick="go('inv')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 012-2z"/></svg><span id="tab-lbl-inv"></span></button>
+    <button data-v="cal" onclick="go('cal')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/></svg><span id="tab-lbl-cal"></span></button>
+    <button data-v="cli" onclick="go('cli')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2m18 0v-2a4 4 0 00-3-3.87M15 7a4 4 0 11-8 0 4 4 0 018 0zm1-3.87a4 4 0 010 7.75"/></svg><span id="tab-lbl-cli"></span></button>
+    <button data-v="set" onclick="go('set')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.82-.33 1.7 1.7 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.51 1.7 1.7 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.33-1.82 1.7 1.7 0 00-1.51-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.51-1 1.7 1.7 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.82.33h0a1.7 1.7 0 001-1.51V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.51h0a1.7 1.7 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.33 1.82v0a1.7 1.7 0 001.51 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg><span id="tab-lbl-set"></span></button>
   </div>
 </div>
 
@@ -142,6 +148,111 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
 let S = { user:null, settings:null, clients:[], invoices:[], view:'inv',
           fCompany:'', fStatus:'all', calY:0, calM:0, fx:null };
 
+// ---------- IDIOMA ----------
+const I18N = {
+pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',signup:'Criar conta',
+  hintLogin:'Primeira vez? Escreve o email e uma password e toca em "Criar conta". Usa os mesmos dados no telemóvel e no PC para veres as mesmas faturas.',
+  logout:'Sair',tInv:'Faturas',tCal:'Calendário',tCli:'Clientes',tSet:'Definições',
+  receivable:'Por receber:',invoice:'fatura',invoices:'faturas',lateN:'em atraso',
+  allCompanies:'Todas as empresas',chipAll:'Todas',chipUnpaid:'Não pagas',chipPaid:'Pagas',
+  emptyInv:'Sem faturas aqui.<br>Toca em <b style="color:var(--acc)">+</b> para criar a primeira.',
+  dueShort:'vence',bPaid:'PAGA',bLate:'ATRASADA',bUnpaid:'NÃO PAGA',
+  invoiceWord:'Fatura',newInvoice:'Nova fatura',clientLbl:'Cliente / Empresa',numberLbl:'Número',
+  dateLbl:'Data',dueLbl:'Vencimento (para o calendário)',linesLbl:'Linhas',addLine:'+ Linha',
+  descPh:'Descrição',qtyPh:'Qt',pricePh:'Preço',vatLbl:'IVA',noVat:'Sem IVA',withVat:'Com IVA',rateLbl:'Taxa %',
+  convertLbl:'Mostrar total convertido £ → € (câmbio de hoje)',subtotal:'Subtotal',total:'Total',
+  converted:'Total convertido',fxDown:'Câmbio indisponível (sem internet?)',addLinesHint:'Adiciona linhas para ver totais.',
+  notesLbl:'Notas (aparecem no PDF)',save:'Guardar',markUnpaid:'Marcar NÃO paga',markPaid:'Marcar PAGA ✓',
+  dlPdf:'⬇ Descarregar PDF',sendMail:'✉ Enviar por email',
+  mailHint:'"Enviar por email" abre a folha de partilha do iPhone com o PDF e o texto já escritos — escolhe Mail e os destinatários. No PC descarrega o PDF e usa o botão de email abaixo.',
+  mailtoBtn:'✉ Abrir Mail só com texto (destinatários preenchidos)',delInv:'Apagar fatura',closeBtn:'Fechar',
+  confirmDelInv:'Apagar esta fatura? Não dá para desfazer.',savedInv:'Fatura guardada ✓',deletedInv:'Fatura apagada',
+  markedPaid:'Marcada como PAGA ✓',markedUnpaid:'Marcada como não paga',
+  needClient:'Cria primeiro um cliente (separador Clientes).',pdfDone:'PDF gerado ⬇',
+  pdfFallback:'PDF descarregado — anexa-o no email que abriu.',
+  thisMonth:'Este mês por receber:',nothing:'nada 🎉',dueOn:'Vencem a',
+  legPaid:'Paga',legDue:'A vencer',legLate:'Em atraso',dows:['S','T','Q','Q','S','S','D'],locale:'pt-PT',
+  emptyCli:'Sem clientes.<br>Toca em <b style="color:var(--acc)">+</b> para criar o primeiro.',
+  noEmail:'sem email',editCli:'Editar cliente',newCli:'Novo cliente',companyLbl:'Empresa *',
+  contactLbl:'Nome de contacto',emailsLbl:'Emails (separados por vírgula — podem ser vários)',
+  cliAddrLbl:'Morada (opcional, aparece no PDF)',cliNifLbl:'NIF / VAT (opcional)',
+  cliLangLbl:'Língua dos emails e da fatura',langEN:'Inglês',langPT:'Português',
+  tplLbl:'Texto do email para este cliente (escreves uma vez, fica gravado)',
+  tplPh:'Deixa vazio para usar o texto automático na língua escolhida.',
+  tplHint:'Podes usar: {numero} {total} {vencimento} {empresa} {cliente} — são substituídos automaticamente em cada fatura.',
+  delCli:'Apagar cliente',confirmDelCli:'Apagar este cliente? As faturas dele ficam sem cliente associado.',
+  savedCli:'Cliente guardado ✓',needCompany:'A empresa precisa de nome.',
+  setTitle:'Os teus dados (aparecem em todos os PDFs)',setName:'Nome / Empresa',
+  setAddr:'Morada (podes usar várias linhas)',setNif:'NIF (opcional)',setIban:'IBAN / dados de pagamento',
+  setExtra:'Linha extra no rodapé (opcional)',setVat:'Taxa de IVA por defeito %',savedSet:'Definições guardadas ✓',
+  installHint:'Instalar no iPhone: abre este site no Safari → botão Partilhar → "Adicionar ao ecrã principal". Fica como uma app.',
+  uiLang:'Língua da aplicação',
+  errFill:'Preenche o email e a password primeiro.',errEmail:'Esse email não parece válido.',
+  errPass:'A password precisa de pelo menos 6 caracteres.',
+  errCreds:'Email ou password errados. Se é a primeira vez, usa "Criar conta".',
+  errExists:'Esse email já tem conta — usa "Entrar".',
+  errRate:'Muitas tentativas seguidas — espera um minuto e tenta outra vez.',
+  created:'Conta criada — entra agora.'},
+en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
+  hintLogin:'First time? Type your email and a password and tap "Create account". Use the same details on your phone and PC to see the same invoices.',
+  logout:'Sign out',tInv:'Invoices',tCal:'Calendar',tCli:'Clients',tSet:'Settings',
+  receivable:'Outstanding:',invoice:'invoice',invoices:'invoices',lateN:'overdue',
+  allCompanies:'All companies',chipAll:'All',chipUnpaid:'Unpaid',chipPaid:'Paid',
+  emptyInv:'No invoices here.<br>Tap <b style="color:var(--acc)">+</b> to create the first one.',
+  dueShort:'due',bPaid:'PAID',bLate:'OVERDUE',bUnpaid:'UNPAID',
+  invoiceWord:'Invoice',newInvoice:'New invoice',clientLbl:'Client / Company',numberLbl:'Number',
+  dateLbl:'Date',dueLbl:'Due date (for the calendar)',linesLbl:'Lines',addLine:'+ Line',
+  descPh:'Description',qtyPh:'Qty',pricePh:'Price',vatLbl:'VAT',noVat:'No VAT',withVat:'With VAT',rateLbl:'Rate %',
+  convertLbl:'Show converted total £ → € (today\'s rate)',subtotal:'Subtotal',total:'Total',
+  converted:'Converted total',fxDown:'Exchange rate unavailable (no internet?)',addLinesHint:'Add lines to see totals.',
+  notesLbl:'Notes (shown on the PDF)',save:'Save',markUnpaid:'Mark as UNPAID',markPaid:'Mark as PAID ✓',
+  dlPdf:'⬇ Download PDF',sendMail:'✉ Send by email',
+  mailHint:'"Send by email" opens the iPhone share sheet with the PDF and the text ready — choose Mail and the recipients. On PC, download the PDF and use the email button below.',
+  mailtoBtn:'✉ Open Mail with text only (recipients pre-filled)',delInv:'Delete invoice',closeBtn:'Close',
+  confirmDelInv:'Delete this invoice? This cannot be undone.',savedInv:'Invoice saved ✓',deletedInv:'Invoice deleted',
+  markedPaid:'Marked as PAID ✓',markedUnpaid:'Marked as unpaid',
+  needClient:'Create a client first (Clients tab).',pdfDone:'PDF generated ⬇',
+  pdfFallback:'PDF downloaded — attach it to the email that opened.',
+  thisMonth:'Outstanding this month:',nothing:'nothing 🎉',dueOn:'Due on',
+  legPaid:'Paid',legDue:'Upcoming',legLate:'Overdue',dows:['M','T','W','T','F','S','S'],locale:'en-GB',
+  emptyCli:'No clients yet.<br>Tap <b style="color:var(--acc)">+</b> to create the first one.',
+  noEmail:'no email',editCli:'Edit client',newCli:'New client',companyLbl:'Company *',
+  contactLbl:'Contact name',emailsLbl:'Emails (comma-separated — can be several)',
+  cliAddrLbl:'Address (optional, shown on the PDF)',cliNifLbl:'Tax ID / VAT (optional)',
+  cliLangLbl:'Language for emails and the invoice',langEN:'English',langPT:'Portuguese',
+  tplLbl:'Email text for this client (write it once, it stays saved)',
+  tplPh:'Leave empty to use the automatic text in the chosen language.',
+  tplHint:'You can use: {numero} {total} {vencimento} {empresa} {cliente} — replaced automatically on each invoice.',
+  delCli:'Delete client',confirmDelCli:'Delete this client? Their invoices will be left without a client.',
+  savedCli:'Client saved ✓',needCompany:'The company needs a name.',
+  setTitle:'Your details (shown on every PDF)',setName:'Name / Company',
+  setAddr:'Address (multiple lines allowed)',setNif:'Tax ID (optional)',setIban:'IBAN / payment details',
+  setExtra:'Extra footer line (optional)',setVat:'Default VAT rate %',savedSet:'Settings saved ✓',
+  installHint:'Install on iPhone: open this site in Safari → Share button → "Add to Home Screen". It works like an app.',
+  uiLang:'App language',
+  errFill:'Fill in the email and password first.',errEmail:'That email does not look valid.',
+  errPass:'The password needs at least 6 characters.',
+  errCreds:'Wrong email or password. If this is your first time, use "Create account".',
+  errExists:'That email already has an account — use "Sign in".',
+  errRate:'Too many attempts — wait a minute and try again.',
+  created:'Account created — sign in now.'}
+};
+let L = localStorage.getItem('inv_lang') || 'pt';
+const t = k => (I18N[L] && I18N[L][k]) ?? I18N.pt[k] ?? k;
+window.t = t; // acessível onde uma variável local "t" esconde esta função
+function setLang(l){ L=l; localStorage.setItem('inv_lang',l); applyLang();
+  if(!document.getElementById('app').classList.contains('hidden')) go(S.view); }
+function applyLang(){
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set('lg-tag',t('tag')); set('lg-l-email',t('email')); set('lg-l-pass',t('pass'));
+  set('lg-btn-in',t('login')); set('lg-btn-up',t('signup')); set('lg-hint',t('hintLogin'));
+  set('btn-logout',t('logout'));
+  set('tab-lbl-inv',t('tInv')); set('tab-lbl-cal',t('tCal')); set('tab-lbl-cli',t('tCli')); set('tab-lbl-set',t('tSet'));
+  document.getElementById('lang-pt').classList.toggle('on',L==='pt');
+  document.getElementById('lang-en').classList.toggle('on',L==='en');
+  document.documentElement.lang = L;
+}
+
 const EUR = v => new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(v||0);
 const GBP = v => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(v||0);
 const fmt = (v,c) => c==='GBP' ? GBP(v) : EUR(v);
@@ -154,19 +265,19 @@ function toast(m){ const t=document.createElement('div'); t.className='toast'; t
 // ---------- AUTH ----------
 function authPT(msg){
   const m = (msg||'').toLowerCase();
-  if(m.includes('anonymous')) return 'Preenche o email e a password primeiro.';
-  if(m.includes('invalid login credentials')) return 'Email ou password errados. Se é a primeira vez, usa "Criar conta".';
-  if(m.includes('already registered')) return 'Esse email já tem conta — usa "Entrar".';
-  if(m.includes('at least 6')) return 'A password precisa de pelo menos 6 caracteres.';
-  if(m.includes('valid email') || m.includes('invalid format')) return 'Esse email não parece válido.';
-  if(m.includes('rate limit') || m.includes('too many')) return 'Muitas tentativas seguidas — espera um minuto e tenta outra vez.';
+  if(m.includes('anonymous')) return t('errFill');
+  if(m.includes('invalid login credentials')) return t('errCreds');
+  if(m.includes('already registered')) return t('errExists');
+  if(m.includes('at least 6')) return t('errPass');
+  if(m.includes('valid email') || m.includes('invalid format')) return t('errEmail');
+  if(m.includes('rate limit') || m.includes('too many')) return t('errRate');
   return 'Erro: '+msg;
 }
 function authFields(){
   const email = lgv('lg-email'), pass = lgv('lg-pass');
-  if(!email || !pass){ toast('Preenche o email e a password primeiro.'); return null; }
-  if(!/^\S+@\S+\.\S+$/.test(email)){ toast('Esse email não parece válido.'); return null; }
-  if(pass.length < 6){ toast('A password precisa de pelo menos 6 caracteres.'); return null; }
+  if(!email || !pass){ toast(t('errFill')); return null; }
+  if(!/^\S+@\S+\.\S+$/.test(email)){ toast(t('errEmail')); return null; }
+  if(pass.length < 6){ toast(t('errPass')); return null; }
   return {email, password: pass};
 }
 async function doLogin(){
@@ -179,7 +290,7 @@ async function doSignup(){
   const f = authFields(); if(!f) return;
   const {data,error} = await sb.auth.signUp(f);
   if(error){ toast(authPT(error.message)); return; }
-  if(data.session) boot(data.session); else toast('Conta criada — entra agora.');
+  if(data.session) boot(data.session); else toast(t('created'));
 }
 function lgv(id){ return document.getElementById(id).value.trim(); }
 async function logout(){ await sb.auth.signOut(); location.reload(); }
@@ -212,11 +323,10 @@ async function loadFx(){
 sb.auth.getSession().then(({data})=>{ if(data.session) boot(data.session); });
 
 // ---------- NAV ----------
-const TITLES = {inv:'Faturas',cal:'Calendário',cli:'Clientes',set:'Definições'};
 function go(v){ S.view=v;
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   ['inv','cal','cli','set'].forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
-  document.getElementById('tb-title').textContent = TITLES[v];
+  document.getElementById('tb-title').textContent = {inv:t('tInv'),cal:t('tCal'),cli:t('tCli'),set:t('tSet')}[v];
   document.getElementById('fab').classList.toggle('hidden', v==='cal'||v==='set');
   render();
 }
@@ -258,17 +368,17 @@ function rInvoices(){
   let oe=0,og=0,late=0;
   open.forEach(i=>{ const t=invTotals(i); oe+=t.EUR.tot; og+=t.GBP.tot; if(isLate(i)) late++; });
   const parts=[]; if(oe)parts.push(EUR(oe)); if(og)parts.push(GBP(og));
-  const banner = `<div class="banner">Por receber: <b>${parts.join(' + ')||EUR(0)}</b>
-    <span style="color:var(--tx2)"> · ${open.length} fatura${open.length===1?'':'s'}</span>
-    ${late?`<div style="color:var(--amber);margin-top:4px">⚠ ${late} em atraso</div>`:''}</div>`;
+  const banner = `<div class="banner">${t('receivable')} <b>${parts.join(' + ')||EUR(0)}</b>
+    <span style="color:var(--tx2)"> · ${open.length} ${open.length===1?t('invoice'):t('invoices')}</span>
+    ${late?`<div style="color:var(--amber);margin-top:4px">⚠ ${late} ${t('lateN')}</div>`:''}</div>`;
 
   const compOpts = S.clients.map(c=>`<option value="${c.id}" ${S.fCompany===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
   const filters = `
     <div class="row"><select onchange="S.fCompany=this.value;render()">
-      <option value="">Todas as empresas</option>${compOpts}</select></div>
+      <option value="">${t('allCompanies')}</option>${compOpts}</select></div>
     <div class="chips">
       ${['all','unpaid','paid'].map(s=>`<span class="chip ${S.fStatus===s?'on':''}"
-        onclick="S.fStatus='${s}';render()">${s==='all'?'Todas':s==='paid'?'Pagas':'Não pagas'}</span>`).join('')}
+        onclick="S.fStatus='${s}';render()">${s==='all'?t('chipAll'):s==='paid'?t('chipPaid'):t('chipUnpaid')}</span>`).join('')}
     </div>`;
 
   // agrupar por empresa
@@ -276,18 +386,17 @@ function rInvoices(){
   list.forEach(i=>{ const c=clientOf(i); const k=c?c.company:'(sem cliente)';
     (groups[k]=groups[k]||[]).push(i); });
   let html = banner+filters;
-  if(!list.length) html += `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">
-    Sem faturas aqui.<br>Toca em <b style="color:var(--acc)">+</b> para criar a primeira.</div>`;
+  if(!list.length) html += `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">${t('emptyInv')}</div>`;
   Object.keys(groups).sort().forEach(k=>{
     html += `<div class="grp">${esc(k)}</div>`;
     groups[k].forEach(i=>{
       const late = isLate(i);
       html += `<div class="card inv-item" onclick="editInvoice('${i.id}')">
         <div><b>${esc(i.number)}</b>
-          <div style="font-size:13px;color:var(--tx2)">${dmy(i.issue_date)}${i.due_date?' · vence '+dmy(i.due_date):''}</div></div>
+          <div style="font-size:13px;color:var(--tx2)">${dmy(i.issue_date)}${i.due_date?' · '+t('dueShort')+' '+dmy(i.due_date):''}</div></div>
         <div class="amt"><div style="font-weight:700">${totalLabel(i)}</div>
           <span class="badge ${i.status==='paid'?'paid':late?'late':'unpaid'}">
-          ${i.status==='paid'?'PAGA':late?'ATRASADA':'NÃO PAGA'}</span></div></div>`;
+          ${i.status==='paid'?t('bPaid'):late?t('bLate'):t('bUnpaid')}</span></div></div>`;
     });
   });
   el.innerHTML = html;
@@ -303,7 +412,7 @@ function nextNumber(){
   return `${y}-${String(max+1).padStart(3,'0')}`;
 }
 function editInvoice(id){
-  if(!S.clients.length && !id){ toast('Cria primeiro um cliente (separador Clientes).'); go('cli'); return; }
+  if(!S.clients.length && !id){ toast(t('needClient')); go('cli'); return; }
   E = id ? JSON.parse(JSON.stringify(S.invoices.find(i=>i.id===id)))
          : { id:null, client_id:S.clients[0].id, number:nextNumber(), issue_date:todayISO(),
              due_date:'', status:'unpaid', vat_rate:null, lines:[{desc:'',qty:1,price:'',currency:'EUR'}],
@@ -313,57 +422,57 @@ function editInvoice(id){
 function invoiceForm(){
   const cliOpts = S.clients.map(c=>`<option value="${c.id}" ${E.client_id===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
   return `
-  <h2 style="margin-bottom:4px">${E.id?'Fatura '+esc(E.number):'Nova fatura'}</h2>
-  <label>Cliente / Empresa</label><select onchange="E.client_id=this.value">${cliOpts}</select>
+  <h2 style="margin-bottom:4px">${E.id?t('invoiceWord')+' '+esc(E.number):t('newInvoice')}</h2>
+  <label>${t('clientLbl')}</label><select onchange="E.client_id=this.value">${cliOpts}</select>
   <div class="row">
-    <div><label>Número</label><input value="${esc(E.number)}" oninput="E.number=this.value"></div>
-    <div><label>Data</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value"></div>
+    <div><label>${t('numberLbl')}</label><input value="${esc(E.number)}" oninput="E.number=this.value"></div>
+    <div><label>${t('dateLbl')}</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value"></div>
   </div>
-  <label>Vencimento (para o calendário)</label>
+  <label>${t('dueLbl')}</label>
   <input type="date" value="${E.due_date||''}" onchange="E.due_date=this.value">
-  <label>Linhas</label>
+  <label>${t('linesLbl')}</label>
   <div id="lines"></div>
-  <button class="btn-g" style="margin-top:8px" onclick="E.lines.push({desc:'',qty:1,price:'',currency:'EUR'});drawLines()">+ Linha</button>
+  <button class="btn-g" style="margin-top:8px" onclick="E.lines.push({desc:'',qty:1,price:'',currency:'EUR'});drawLines()">${t('addLine')}</button>
   <div class="row" style="margin-top:14px">
-    <div><label style="margin-top:0">IVA</label>
+    <div><label style="margin-top:0">${t('vatLbl')}</label>
       <select onchange="E.vat_rate = this.value===''?null:Number(document.getElementById('vatr').value); drawVat(this.value!=='')" id="vats">
-        <option value="" ${E.vat_rate==null?'selected':''}>Sem IVA</option>
-        <option value="x" ${E.vat_rate!=null?'selected':''}>Com IVA</option></select></div>
-    <div id="vatbox" class="${E.vat_rate==null?'hidden':''}"><label style="margin-top:0">Taxa %</label>
+        <option value="" ${E.vat_rate==null?'selected':''}>${t('noVat')}</option>
+        <option value="x" ${E.vat_rate!=null?'selected':''}>${t('withVat')}</option></select></div>
+    <div id="vatbox" class="${E.vat_rate==null?'hidden':''}"><label style="margin-top:0">${t('rateLbl')}</label>
       <input id="vatr" type="number" value="${E.vat_rate!=null?E.vat_rate:(S.settings.default_vat||23)}"
         oninput="E.vat_rate=Number(this.value);drawTotals()"></div>
   </div>
   <label><input type="checkbox" style="width:auto;margin-right:8px" ${E.convert_total?'checked':''}
-    onchange="E.convert_total=this.checked;drawTotals()">Mostrar total convertido £ → € (câmbio de hoje)</label>
+    onchange="E.convert_total=this.checked;drawTotals()">${t('convertLbl')}</label>
   <div class="total-box" id="totals"></div>
-  <label>Notas (aparecem no PDF)</label>
+  <label>${t('notesLbl')}</label>
   <textarea rows="2" oninput="E.notes=this.value">${esc(E.notes)}</textarea>
   <div class="row" style="margin-top:18px">
-    <button class="btn-p" onclick="saveInvoice()">Guardar</button>
+    <button class="btn-p" onclick="saveInvoice()">${t('save')}</button>
     ${E.id? (E.status==='paid'
-      ? `<button class="btn-g" onclick="setPaid(false)">Marcar NÃO paga</button>`
-      : `<button class="btn-green" onclick="setPaid(true)">Marcar PAGA ✓</button>`) : ''}
+      ? `<button class="btn-g" onclick="setPaid(false)">${t('markUnpaid')}</button>`
+      : `<button class="btn-green" onclick="setPaid(true)">${t('markPaid')}</button>`) : ''}
   </div>
   ${E.id?`
   <div class="row" style="margin-top:10px">
-    <button class="btn-g" onclick="downloadPDF()">⬇ Descarregar PDF</button>
-    <button class="btn-g" onclick="sharePDF()">✉ Enviar por email</button>
+    <button class="btn-g" onclick="downloadPDF()">${t('dlPdf')}</button>
+    <button class="btn-g" onclick="sharePDF()">${t('sendMail')}</button>
   </div>
-  <p class="hint">"Enviar por email" abre a folha de partilha do iPhone com o PDF e o texto já escritos — escolhe Mail e os destinatários. No PC descarrega o PDF e usa o botão de email abaixo.</p>
-  <div class="row"><button class="btn-g" onclick="openMailto()">✉ Abrir Mail só com texto (destinatários preenchidos)</button></div>
-  <div class="row" style="margin-top:10px"><button class="btn-red" onclick="delInvoice()">Apagar fatura</button></div>`:''}
-  <div class="row" style="margin-top:10px"><button class="btn-g" onclick="closeSheet()">Fechar</button></div>`;
+  <p class="hint">${t('mailHint')}</p>
+  <div class="row"><button class="btn-g" onclick="openMailto()">${t('mailtoBtn')}</button></div>
+  <div class="row" style="margin-top:10px"><button class="btn-red" onclick="delInvoice()">${t('delInv')}</button></div>`:''}
+  <div class="row" style="margin-top:10px"><button class="btn-g" onclick="closeSheet()">${t('closeBtn')}</button></div>`;
 }
 function drawVat(on){ document.getElementById('vatbox').classList.toggle('hidden',!on);
   if(on) E.vat_rate = Number(document.getElementById('vatr').value); drawTotals(); }
 function drawLines(){
   const el = document.getElementById('lines');
   el.innerHTML = `<table class="lines-tbl">`+ E.lines.map((l,i)=>`
-    <tr><td style="width:44%"><input placeholder="Descrição" value="${esc(l.desc)}"
+    <tr><td style="width:44%"><input placeholder="${t('descPh')}" value="${esc(l.desc)}"
         oninput="E.lines[${i}].desc=this.value"></td>
-      <td style="width:13%"><input type="number" inputmode="decimal" placeholder="Qt" value="${l.qty}"
+      <td style="width:13%"><input type="number" inputmode="decimal" placeholder="${t('qtyPh')}" value="${l.qty}"
         oninput="E.lines[${i}].qty=this.value;drawTotals()"></td>
-      <td style="width:20%"><input type="number" inputmode="decimal" placeholder="Preço" value="${l.price}"
+      <td style="width:20%"><input type="number" inputmode="decimal" placeholder="${t('pricePh')}" value="${l.price}"
         oninput="E.lines[${i}].price=this.value;drawTotals()"></td>
       <td style="width:17%"><select onchange="E.lines[${i}].currency=this.value;drawTotals()">
         <option ${l.currency!=='GBP'?'selected':''}>EUR</option>
@@ -374,15 +483,15 @@ function drawLines(){
 function drawTotals(){
   const t = invTotals(E); const box = document.getElementById('totals'); let h='';
   ['EUR','GBP'].forEach(c=>{ if(t[c].sub||((E.lines||[]).some(l=>l.currency===c))){
-    h += `<div class="tr"><span>Subtotal ${c==='EUR'?'€':'£'}</span><span>${fmt(t[c].sub,c)}</span></div>`;
-    if(E.vat_rate!=null) h += `<div class="tr"><span>IVA ${E.vat_rate}%</span><span>${fmt(t[c].vat,c)}</span></div>`;
-    h += `<div class="tr big"><span>Total ${c==='EUR'?'€':'£'}</span><span>${fmt(t[c].tot,c)}</span></div>`; }});
+    h += `<div class="tr"><span>${window.t('subtotal')} ${c==='EUR'?'€':'£'}</span><span>${fmt(t[c].sub,c)}</span></div>`;
+    if(E.vat_rate!=null) h += `<div class="tr"><span>${window.t('vatLbl')} ${E.vat_rate}%</span><span>${fmt(t[c].vat,c)}</span></div>`;
+    h += `<div class="tr big"><span>${window.t('total')} ${c==='EUR'?'€':'£'}</span><span>${fmt(t[c].tot,c)}</span></div>`; }});
   if(E.convert_total){
     const ct = convertedTotal(E);
-    h += ct!=null ? `<div class="tr big" style="color:var(--acc)"><span>Total convertido (1£=${S.fx.toFixed(4)}€)</span><span>${EUR(ct)}</span></div>`
-      : `<div class="tr" style="color:var(--amber)">Câmbio indisponível (sem internet?)</div>`;
+    h += ct!=null ? `<div class="tr big" style="color:var(--acc)"><span>${window.t('converted')} (1£=${S.fx.toFixed(4)}€)</span><span>${EUR(ct)}</span></div>`
+      : `<div class="tr" style="color:var(--amber)">${window.t('fxDown')}</div>`;
   }
-  box.innerHTML = h || '<div class="tr">Adiciona linhas para ver totais.</div>';
+  box.innerHTML = h || `<div class="tr">${window.t('addLinesHint')}</div>`;
 }
 async function saveInvoice(){
   E.lines = (E.lines||[]).filter(l=>l.desc||l.price);
@@ -395,48 +504,57 @@ async function saveInvoice(){
   else res = await sb.from('inv_invoices').insert(rec).select().single();
   if(res.error){ toast('Erro: '+res.error.message); return; }
   E = res.data;
-  await loadAll(); closeSheet(); render(); toast('Fatura guardada ✓');
+  await loadAll(); closeSheet(); render(); toast(t('savedInv'));
 }
 async function setPaid(p){
   E.status = p?'paid':'unpaid'; E.paid_at = p?todayISO():null;
   if(E.id){ await sb.from('inv_invoices').update({status:E.status,paid_at:E.paid_at}).eq('id',E.id);
-    await loadAll(); closeSheet(); render(); toast(p?'Marcada como PAGA ✓':'Marcada como não paga'); }
+    await loadAll(); closeSheet(); render(); toast(p?t('markedPaid'):t('markedUnpaid')); }
 }
 async function delInvoice(){
-  if(!confirm('Apagar esta fatura? Não dá para desfazer.')) return;
+  if(!confirm(t('confirmDelInv'))) return;
   await sb.from('inv_invoices').delete().eq('id',E.id);
-  await loadAll(); closeSheet(); render(); toast('Fatura apagada');
+  await loadAll(); closeSheet(); render(); toast(t('deletedInv'));
 }
 
 // ---------- PDF ----------
+const PDFL = {
+  pt:{from:'DE',to:'PARA',desc:'DESCRIÇÃO',qty:'QT',price:'PREÇO',total:'TOTAL',sub:'Subtotal',
+      vat:'IVA',conv:'Total em €',paid:'✓ PAGA / PAID',pay:'Pagamento / Payment',nif:'NIF',
+      no:'Nº',date:'Data',due:'Vencimento'},
+  en:{from:'FROM',to:'BILL TO',desc:'DESCRIPTION',qty:'QTY',price:'PRICE',total:'TOTAL',sub:'Subtotal',
+      vat:'VAT',conv:'Total in €',paid:'✓ PAID',pay:'Payment',nif:'Tax ID',
+      no:'No.',date:'Date',due:'Due date'}
+};
 function buildPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm',format:'a4'});
   const c = clientOf(E)||{}; const st = S.settings; const t = invTotals(E);
+  const P = PDFL[c.language==='pt'?'pt':'en'];
   const W=210, M=18; let y=24;
   doc.setTextColor(30,33,40); doc.setFont('helvetica','bold'); doc.setFontSize(26);
   doc.text('INVOICE', M, y);
   doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(110,115,125);
-  doc.text(`Nº ${E.number}`, W-M, y-6, {align:'right'});
-  doc.text(`Data: ${dmy(E.issue_date)}`, W-M, y-1, {align:'right'});
-  if(E.due_date) doc.text(`Vencimento: ${dmy(E.due_date)}`, W-M, y+4, {align:'right'});
+  doc.text(`${P.no} ${E.number}`, W-M, y-6, {align:'right'});
+  doc.text(`${P.date}: ${dmy(E.issue_date)}`, W-M, y-1, {align:'right'});
+  if(E.due_date) doc.text(`${P.due}: ${dmy(E.due_date)}`, W-M, y+4, {align:'right'});
   y+=14; doc.setDrawColor(220,222,228); doc.line(M,y,W-M,y); y+=9;
   doc.setTextColor(110,115,125); doc.setFontSize(8.5);
-  doc.text('DE', M, y); doc.text('PARA', W/2+4, y); y+=5;
+  doc.text(P.from, M, y); doc.text(P.to, W/2+4, y); y+=5;
   doc.setTextColor(30,33,40); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
   doc.text(st.business_name||'', M, y); doc.text(c.company||'', W/2+4, y);
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(70,75,85);
   let yl=y, yr=y;
   (st.address||'').split('\n').forEach(l=>{ yl+=4.6; doc.text(l,M,yl); });
-  if(st.nif){ yl+=4.6; doc.text('NIF: '+st.nif, M, yl); }
+  if(st.nif){ yl+=4.6; doc.text(P.nif+': '+st.nif, M, yl); }
   [(c.contact_name||''),(c.address||'')].join('\n').split('\n').filter(Boolean).forEach(l=>{ yr+=4.6; doc.text(l,W/2+4,yr); });
-  if(c.nif){ yr+=4.6; doc.text('NIF/VAT: '+c.nif, W/2+4, yr); }
+  if(c.nif){ yr+=4.6; doc.text(P.nif+': '+c.nif, W/2+4, yr); }
   y = Math.max(yl,yr)+12;
   // tabela
   doc.setFillColor(243,244,247); doc.rect(M,y-5,W-2*M,8,'F');
   doc.setFontSize(8.5); doc.setTextColor(110,115,125); doc.setFont('helvetica','bold');
-  doc.text('DESCRIÇÃO',M+2,y); doc.text('QT',W-M-58,y,{align:'right'});
-  doc.text('PREÇO',W-M-32,y,{align:'right'}); doc.text('TOTAL',W-M-2,y,{align:'right'});
+  doc.text(P.desc,M+2,y); doc.text(P.qty,W-M-58,y,{align:'right'});
+  doc.text(P.price,W-M-32,y,{align:'right'}); doc.text(P.total,W-M-2,y,{align:'right'});
   y+=8; doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(30,33,40);
   (E.lines||[]).forEach(l=>{
     const tot=(Number(l.qty)||0)*(Number(l.price)||0);
@@ -452,22 +570,22 @@ function buildPDF(){
     doc.setTextColor(big?30:90,big?33:95,big?40:105);
     doc.text(lbl, W-M-60, y); doc.text(val, W-M-2, y, {align:'right'}); y+=big?7.5:6; };
   ['EUR','GBP'].forEach(cc=>{ if(t[cc].tot){
-    if(E.vat_rate!=null){ tx(`Subtotal ${cc==='EUR'?'€':'£'}`, fmt(t[cc].sub,cc));
-      tx(`IVA ${E.vat_rate}%`, fmt(t[cc].vat,cc)); }
-    tx(`TOTAL ${cc==='EUR'?'€':'£'}`, fmt(t[cc].tot,cc), true); }});
+    if(E.vat_rate!=null){ tx(`${P.sub} ${cc==='EUR'?'€':'£'}`, fmt(t[cc].sub,cc));
+      tx(`${P.vat} ${E.vat_rate}%`, fmt(t[cc].vat,cc)); }
+    tx(`${P.total} ${cc==='EUR'?'€':'£'}`, fmt(t[cc].tot,cc), true); }});
   if(E.convert_total && S.fx && t.GBP.tot){
-    tx(`Total em € (1£=${S.fx.toFixed(4)}€)`, EUR(convertedTotal(E)), true); }
+    tx(`${P.conv} (1£=${S.fx.toFixed(4)}€)`, EUR(convertedTotal(E)), true); }
   y+=6;
   if(E.status==='paid'){ doc.setTextColor(46,160,100); doc.setFontSize(13); doc.setFont('helvetica','bold');
-    doc.text('✓ PAGA / PAID', M, y); y+=8; }
+    doc.text(P.paid, M, y); y+=8; }
   doc.setTextColor(90,95,105); doc.setFontSize(9); doc.setFont('helvetica','normal');
   if(E.notes){ doc.text(E.notes, M, y, {maxWidth:W-2*M}); y+=10; }
-  if(st.iban){ doc.text('Pagamento / Payment: '+st.iban, M, 280); }
+  if(st.iban){ doc.text(P.pay+': '+st.iban, M, 280); }
   if(st.extra){ doc.text(st.extra, M, 285); }
   return doc;
 }
 function pdfName(){ const c=clientOf(E); return `Invoice_${E.number.replace(/[^\w-]/g,'_')}_${(c?c.company:'').replace(/[^\w]/g,'')}.pdf`; }
-function downloadPDF(){ buildPDF().save(pdfName()); toast('PDF gerado ⬇'); }
+function downloadPDF(){ buildPDF().save(pdfName()); toast(t('pdfDone')); }
 
 // ---------- EMAIL ----------
 function defaultTemplate(lang){
@@ -495,7 +613,7 @@ async function sharePDF(){
     catch(e){ /* cancelado */ }
   } else {
     buildPDF().save(pdfName()); openMailto();
-    toast('PDF descarregado — anexa-o no email que abriu.');
+    toast(t('pdfFallback'));
   }
 }
 function openMailto(){
@@ -509,12 +627,12 @@ function rCalendar(){
   const y=S.calY, m=S.calM;
   const first = new Date(y,m,1); const start=(first.getDay()+6)%7; // seg=0
   const days = new Date(y,m+1,0).getDate();
-  const mn = first.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+  const mn = first.toLocaleDateString(t('locale'),{month:'long',year:'numeric'});
   const byDay = {};
   S.invoices.forEach(i=>{ if(!i.due_date) return;
     const d=i.due_date; if(d.slice(0,7)===`${y}-${String(m+1).padStart(2,'0')}`)
       (byDay[parseInt(d.slice(8))]=byDay[parseInt(d.slice(8))]||[]).push(i); });
-  let grid = ['S','T','Q','Q','S','S','D'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  let grid = t('dows').map(d=>`<div class="cal-dow">${d}</div>`).join('');
   for(let i=0;i<start;i++) grid+=`<div></div>`;
   const td = todayISO();
   for(let d=1;d<=days;d++){
@@ -531,37 +649,36 @@ function rCalendar(){
     me+=t.EUR.tot; mg+=t.GBP.tot; if(isLate(i))ml++; }});
   const p=[]; if(me)p.push(EUR(me)); if(mg)p.push(GBP(mg));
   el.innerHTML = `
-  <div class="banner">Este mês por receber: <b>${p.join(' + ')||'nada 🎉'}</b>
-    ${ml?`<div style="color:var(--amber);margin-top:4px">⚠ ${ml} em atraso</div>`:''}</div>
+  <div class="banner">${t('thisMonth')} <b>${p.join(' + ')||t('nothing')}</b>
+    ${ml?`<div style="color:var(--amber);margin-top:4px">⚠ ${ml} ${t('lateN')}</div>`:''}</div>
   <div class="cal-head">
     <button class="btn-g" onclick="calNav(-1)">‹</button>
     <h3 style="text-transform:capitalize">${mn}</h3>
     <button class="btn-g" onclick="calNav(1)">›</button></div>
   <div class="cal-grid">${grid}</div>
-  <div class="legend"><span><i style="background:var(--green)"></i>Paga</span>
-    <span><i style="background:var(--amber)"></i>A vencer</span>
-    <span><i style="background:var(--red)"></i>Em atraso</span></div>`;
+  <div class="legend"><span><i style="background:var(--green)"></i>${t('legPaid')}</span>
+    <span><i style="background:var(--amber)"></i>${t('legDue')}</span>
+    <span><i style="background:var(--red)"></i>${t('legLate')}</span></div>`;
 }
 function calNav(d){ S.calM+=d; if(S.calM<0){S.calM=11;S.calY--;} if(S.calM>11){S.calM=0;S.calY++;} rCalendar(); }
 function dayDetail(iso){
   const invs = S.invoices.filter(i=>i.due_date===iso);
-  openSheet(`<h2>Vencem a ${dmy(iso)}</h2>`+ invs.map(i=>{ const c=clientOf(i);
+  openSheet(`<h2>${t('dueOn')} ${dmy(iso)}</h2>`+ invs.map(i=>{ const c=clientOf(i);
     return `<div class="card inv-item" onclick="closeSheet();editInvoice('${i.id}')">
       <div><b>${esc(i.number)}</b><div style="font-size:13px;color:var(--tx2)">${esc(c?c.company:'')}</div></div>
       <div class="amt"><div style="font-weight:700">${totalLabel(i)}</div>
-      <span class="badge ${i.status==='paid'?'paid':isLate(i)?'late':'unpaid'}">${i.status==='paid'?'PAGA':isLate(i)?'ATRASADA':'NÃO PAGA'}</span></div></div>`;}).join('')
-    +`<div class="row" style="margin-top:12px"><button class="btn-g" onclick="closeSheet()">Fechar</button></div>`);
+      <span class="badge ${i.status==='paid'?'paid':isLate(i)?'late':'unpaid'}">${i.status==='paid'?t('bPaid'):isLate(i)?t('bLate'):t('bUnpaid')}</span></div></div>`;}).join('')
+    +`<div class="row" style="margin-top:12px"><button class="btn-g" onclick="closeSheet()">${t('closeBtn')}</button></div>`);
 }
 
 // ---------- CLIENTES ----------
 let C = null;
 function rClients(){
   const el = document.getElementById('v-cli');
-  el.innerHTML = (S.clients.length? '' : `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">
-    Sem clientes.<br>Toca em <b style="color:var(--acc)">+</b> para criar o primeiro.</div>`)
+  el.innerHTML = (S.clients.length? '' : `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">${t('emptyCli')}</div>`)
   + S.clients.map(c=>`<div class="card inv-item" onclick="editClient('${c.id}')">
       <div><b>${esc(c.company)}</b>
-        <div style="font-size:13px;color:var(--tx2)">${esc((c.emails||[]).join(', '))||'sem email'}</div></div>
+        <div style="font-size:13px;color:var(--tx2)">${esc((c.emails||[]).join(', '))||t('noEmail')}</div></div>
       <span class="badge" style="background:var(--bg2);color:var(--tx2)">${c.language==='pt'?'🇵🇹 PT':'🇬🇧 EN'}</span>
     </div>`).join('');
 }
@@ -569,37 +686,37 @@ function editClient(id){
   C = id ? JSON.parse(JSON.stringify(S.clients.find(c=>c.id===id)))
          : {id:null,company:'',contact_name:'',emails:[],language:'en',email_template:'',address:'',nif:''};
   openSheet(`
-  <h2>${C.id?'Editar cliente':'Novo cliente'}</h2>
-  <label>Empresa *</label><input value="${esc(C.company)}" oninput="C.company=this.value">
-  <label>Nome de contacto</label><input value="${esc(C.contact_name)}" oninput="C.contact_name=this.value">
-  <label>Emails (separados por vírgula — podem ser vários)</label>
+  <h2>${C.id?t('editCli'):t('newCli')}</h2>
+  <label>${t('companyLbl')}</label><input value="${esc(C.company)}" oninput="C.company=this.value">
+  <label>${t('contactLbl')}</label><input value="${esc(C.contact_name)}" oninput="C.contact_name=this.value">
+  <label>${t('emailsLbl')}</label>
   <input value="${esc((C.emails||[]).join(', '))}" oninput="C.emails=this.value.split(',').map(s=>s.trim()).filter(Boolean)">
-  <label>Morada (opcional, aparece no PDF)</label><input value="${esc(C.address)}" oninput="C.address=this.value">
-  <label>NIF / VAT (opcional)</label><input value="${esc(C.nif)}" oninput="C.nif=this.value">
-  <label>Língua dos emails e do texto</label>
+  <label>${t('cliAddrLbl')}</label><input value="${esc(C.address)}" oninput="C.address=this.value">
+  <label>${t('cliNifLbl')}</label><input value="${esc(C.nif)}" oninput="C.nif=this.value">
+  <label>${t('cliLangLbl')}</label>
   <select onchange="C.language=this.value">
-    <option value="en" ${C.language!=='pt'?'selected':''}>Inglês</option>
-    <option value="pt" ${C.language==='pt'?'selected':''}>Português</option></select>
-  <label>Texto do email para este cliente (escreves uma vez, fica gravado)</label>
-  <textarea rows="7" placeholder="Deixa vazio para usar o texto automático na língua escolhida."
+    <option value="en" ${C.language!=='pt'?'selected':''}>${t('langEN')}</option>
+    <option value="pt" ${C.language==='pt'?'selected':''}>${t('langPT')}</option></select>
+  <label>${t('tplLbl')}</label>
+  <textarea rows="7" placeholder="${t('tplPh')}"
     oninput="C.email_template=this.value">${esc(C.email_template)}</textarea>
-  <p class="hint">Podes usar: {numero} {total} {vencimento} {empresa} {cliente} — são substituídos automaticamente em cada fatura.</p>
+  <p class="hint">${t('tplHint')}</p>
   <div class="row" style="margin-top:14px">
-    <button class="btn-p" onclick="saveClient()">Guardar</button>
-    <button class="btn-g" onclick="closeSheet()">Fechar</button></div>
-  ${C.id?`<div class="row" style="margin-top:10px"><button class="btn-red" onclick="delClient()">Apagar cliente</button></div>`:''}`);
+    <button class="btn-p" onclick="saveClient()">${t('save')}</button>
+    <button class="btn-g" onclick="closeSheet()">${t('closeBtn')}</button></div>
+  ${C.id?`<div class="row" style="margin-top:10px"><button class="btn-red" onclick="delClient()">${t('delCli')}</button></div>`:''}`);
 }
 async function saveClient(){
-  if(!C.company.trim()){ toast('A empresa precisa de nome.'); return; }
+  if(!C.company.trim()){ toast(t('needCompany')); return; }
   const rec = {user_id:S.user.id, company:C.company, contact_name:C.contact_name,
     emails:C.emails, language:C.language, email_template:C.email_template, address:C.address, nif:C.nif};
   let res = C.id ? await sb.from('inv_clients').update(rec).eq('id',C.id)
                  : await sb.from('inv_clients').insert(rec);
   if(res.error){ toast('Erro: '+res.error.message); return; }
-  await loadAll(); closeSheet(); render(); toast('Cliente guardado ✓');
+  await loadAll(); closeSheet(); render(); toast(t('savedCli'));
 }
 async function delClient(){
-  if(!confirm('Apagar este cliente? As faturas dele ficam sem cliente associado.')) return;
+  if(!confirm(t('confirmDelCli'))) return;
   await sb.from('inv_clients').delete().eq('id',C.id);
   await loadAll(); closeSheet(); render();
 }
@@ -609,16 +726,23 @@ function rSettings(){
   const st = S.settings;
   document.getElementById('v-set').innerHTML = `
   <div class="card">
-    <h3 style="margin-bottom:4px">Os teus dados (aparecem em todos os PDFs)</h3>
-    <label>Nome / Empresa</label><input id="st-name" value="${esc(st.business_name)}">
-    <label>Morada (podes usar várias linhas)</label><textarea id="st-addr" rows="2">${esc(st.address)}</textarea>
-    <label>NIF (opcional)</label><input id="st-nif" value="${esc(st.nif)}">
-    <label>IBAN / dados de pagamento</label><input id="st-iban" value="${esc(st.iban)}">
-    <label>Linha extra no rodapé (opcional)</label><input id="st-extra" value="${esc(st.extra)}">
-    <label>Taxa de IVA por defeito %</label><input id="st-vat" type="number" value="${st.default_vat??23}">
-    <div class="row" style="margin-top:16px"><button class="btn-p" onclick="saveSettings()">Guardar</button></div>
+    <label style="margin-top:0">${t('uiLang')}</label>
+    <div class="chips" style="margin:4px 0 0">
+      <span class="chip ${L==='pt'?'on':''}" onclick="setLang('pt')">🇵🇹 Português</span>
+      <span class="chip ${L==='en'?'on':''}" onclick="setLang('en')">🇬🇧 English</span>
+    </div>
   </div>
-  <p class="hint">Instalar no iPhone: abre este site no Safari → botão Partilhar → "Adicionar ao ecrã principal". Fica como uma app.</p>`;
+  <div class="card">
+    <h3 style="margin-bottom:4px">${t('setTitle')}</h3>
+    <label>${t('setName')}</label><input id="st-name" value="${esc(st.business_name)}">
+    <label>${t('setAddr')}</label><textarea id="st-addr" rows="2">${esc(st.address)}</textarea>
+    <label>${t('setNif')}</label><input id="st-nif" value="${esc(st.nif)}">
+    <label>${t('setIban')}</label><input id="st-iban" value="${esc(st.iban)}">
+    <label>${t('setExtra')}</label><input id="st-extra" value="${esc(st.extra)}">
+    <label>${t('setVat')}</label><input id="st-vat" type="number" value="${st.default_vat??23}">
+    <div class="row" style="margin-top:16px"><button class="btn-p" onclick="saveSettings()">${t('save')}</button></div>
+  </div>
+  <p class="hint">${t('installHint')}</p>`;
 }
 async function saveSettings(){
   const g = id=>document.getElementById(id).value;
@@ -627,7 +751,7 @@ async function saveSettings(){
     updated_at:new Date().toISOString()};
   const res = await sb.from('inv_settings').upsert(rec);
   if(res.error){ toast('Erro: '+res.error.message); return; }
-  S.settings = rec; toast('Definições guardadas ✓');
+  S.settings = rec; toast(t('savedSet'));
 }
 
 // ---------- SHEET ----------
@@ -638,6 +762,7 @@ function openSheet(html){
 }
 function closeSheet(){ document.getElementById('sheet').classList.add('hidden'); }
 document.getElementById('sheet').addEventListener('click',e=>{ if(e.target.id==='sheet') closeSheet(); });
+applyLang();
 </script>
 </body>
 </html>
