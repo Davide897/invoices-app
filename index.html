@@ -9,6 +9,7 @@
 <title>Invoices</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js" integrity="sha384-WgXwGL6fUsYJWNaKJgVbrJKGRQwc1vieh2oy4kw9nXqpNDz3tdSsqEYUgeHD/NuF" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <style>
@@ -182,8 +183,12 @@ async function loadAll(){
   S.clients = cl.data||[]; S.invoices = inv.data||[];
 }
 async function loadFx(){
-  try{ const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=EUR');
-    const j = await r.json(); S.fx = j.rates.EUR; }catch(e){ S.fx=null; }
+  try{ const r = await fetch('https://api.frankfurter.dev/v1/latest?base=GBP&symbols=EUR');
+    const j = await r.json(); S.fx = j.rates.EUR; }
+  catch(e){
+    try{ const r2 = await fetch('https://open.er-api.com/v6/latest/GBP');
+      const j2 = await r2.json(); S.fx = j2.rates.EUR; }catch(e2){ S.fx=null; }
+  }
   if(S.view==='inv') render();
 }
 sb.auth.getSession().then(({data})=>{ if(data.session) boot(data.session); });
