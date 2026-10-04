@@ -131,6 +131,7 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
     <div id="v-inv"></div>
     <div id="v-cal" class="hidden"></div>
     <div id="v-cli" class="hidden"></div>
+    <div id="v-sum" class="hidden"></div>
     <div id="v-set" class="hidden"></div>
   </main>
   <button class="fab" id="fab" onclick="fabClick()">+</button>
@@ -138,6 +139,7 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
     <button data-v="inv" class="on" onclick="go('inv')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 012-2z"/></svg><span id="tab-lbl-inv"></span></button>
     <button data-v="cal" onclick="go('cal')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/></svg><span id="tab-lbl-cal"></span></button>
     <button data-v="cli" onclick="go('cli')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2m18 0v-2a4 4 0 00-3-3.87M15 7a4 4 0 11-8 0 4 4 0 018 0zm1-3.87a4 4 0 010 7.75"/></svg><span id="tab-lbl-cli"></span></button>
+    <button data-v="sum" onclick="go('sum')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-9-9v9z"/><path d="M14 3.3A9 9 0 0120.7 10H14z"/></svg><span id="tab-lbl-sum"></span></button>
     <button data-v="set" onclick="go('set')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.82-.33 1.7 1.7 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.51 1.7 1.7 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.33-1.82 1.7 1.7 0 00-1.51-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.51-1 1.7 1.7 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.82.33h0a1.7 1.7 0 001-1.51V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.51h0a1.7 1.7 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.33 1.82v0a1.7 1.7 0 001.51 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg><span id="tab-lbl-set"></span></button>
   </div>
 </div>
@@ -150,13 +152,14 @@ const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
 let S = { user:null, settings:null, clients:[], invoices:[], banks:[], view:'inv',
-          fCompany:'', fStatus:'all', calY:0, calM:0, fx:null };
+          fCompany:'', fStatus:'all', calY:0, calM:0, sumY:new Date().getFullYear(), fx:null };
 
 // ---------- IDIOMA ----------
 const I18N = {
 pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',signup:'Criar conta',
   hintLogin:'Primeira vez? Escreve o email e uma password e toca em "Criar conta". Usa os mesmos dados no telemóvel e no PC para veres as mesmas faturas.',
-  logout:'Sair',tInv:'Faturas',tCal:'Calendário',tCli:'Clientes',tSet:'Definições',
+  logout:'Sair',tInv:'Faturas',tCal:'Calendário',tCli:'Clientes',tSet:'Definições',tSum:'Resumo',
+  sumTitle:'Resumo do ano',sumYear:'Ano',sumEarned:'Total faturado',sumPaid:'Já pago',sumDue:'A receber (no prazo)',sumLate:'Em atraso',sumOwed:'Por receber',sumMonth:'Faturado este mês',sumPaidPct:'pago',sumByCo:'Por empresa',sumNote:'Valores em € para poder somar tudo; as faturas em £ são convertidas ao câmbio de hoje (1£={fx}€). O ano conta pela data de emissão.',sumNoFx:'Câmbio indisponível: usado um valor aproximado.',
   receivable:'Por receber:',invoice:'fatura',invoices:'faturas',lateN:'em atraso',
   allCompanies:'Todas as empresas',chipAll:'Todas',chipUnpaid:'Não pagas',chipPaid:'Pagas',
   emptyInv:'Sem faturas aqui.<br>Toca em <b style="color:var(--acc)">+</b> para criar a primeira.',
@@ -213,7 +216,8 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)'},
 en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
   hintLogin:'First time? Type your email and a password and tap "Create account". Use the same details on your phone and PC to see the same invoices.',
-  logout:'Sign out',tInv:'Invoices',tCal:'Calendar',tCli:'Clients',tSet:'Settings',
+  logout:'Sign out',tInv:'Invoices',tCal:'Calendar',tCli:'Clients',tSet:'Settings',tSum:'Summary',
+  sumTitle:'Year summary',sumYear:'Year',sumEarned:'Total invoiced',sumPaid:'Paid',sumDue:'Outstanding (on time)',sumLate:'Overdue',sumOwed:'Outstanding',sumMonth:'Invoiced this month',sumPaidPct:'paid',sumByCo:'By company',sumNote:'Amounts in € so everything can be added up; £ invoices are converted at today\'s rate (1£={fx}€). The year is based on the issue date.',sumNoFx:'Exchange rate unavailable: an approximate value was used.',
   receivable:'Outstanding:',invoice:'invoice',invoices:'invoices',lateN:'overdue',
   allCompanies:'All companies',chipAll:'All',chipUnpaid:'Unpaid',chipPaid:'Paid',
   emptyInv:'No invoices here.<br>Tap <b style="color:var(--acc)">+</b> to create the first one.',
@@ -279,7 +283,7 @@ function applyLang(){
   set('lg-tag',t('tag')); set('lg-l-email',t('email')); set('lg-l-pass',t('pass'));
   set('lg-btn-in',t('login')); set('lg-btn-up',t('signup')); set('lg-hint',t('hintLogin'));
   set('btn-logout',t('logout'));
-  set('tab-lbl-inv',t('tInv')); set('tab-lbl-cal',t('tCal')); set('tab-lbl-cli',t('tCli')); set('tab-lbl-set',t('tSet'));
+  set('tab-lbl-inv',t('tInv')); set('tab-lbl-cal',t('tCal')); set('tab-lbl-cli',t('tCli')); set('tab-lbl-set',t('tSet')); set('tab-lbl-sum',t('tSum'));
   document.getElementById('lang-pt').classList.toggle('on',L==='pt');
   document.getElementById('lang-en').classList.toggle('on',L==='en');
   document.documentElement.lang = L;
@@ -356,21 +360,21 @@ async function loadFx(){
     try{ const r2 = await fetch('https://open.er-api.com/v6/latest/GBP');
       const j2 = await r2.json(); S.fx = j2.rates.EUR; }catch(e2){ S.fx=null; }
   }
-  if(S.view==='inv') render();
+  if(S.view==='inv'||S.view==='sum') render();
 }
 sb.auth.getSession().then(({data})=>{ if(data.session) boot(data.session); });
 
 // ---------- NAV ----------
 function go(v){ S.view=v;
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  ['inv','cal','cli','set'].forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
-  document.getElementById('tb-title').textContent = {inv:t('tInv'),cal:t('tCal'),cli:t('tCli'),set:t('tSet')}[v];
-  document.getElementById('fab').classList.toggle('hidden', v==='cal'||v==='set');
+  ['inv','cal','cli','sum','set'].forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
+  document.getElementById('tb-title').textContent = {inv:t('tInv'),cal:t('tCal'),cli:t('tCli'),sum:t('tSum'),set:t('tSet')}[v];
+  document.getElementById('fab').classList.toggle('hidden', v==='cal'||v==='set'||v==='sum');
   render();
 }
 function fabClick(){ if(S.view==='cli') editClient(null); else editInvoice(null); }
 function render(){ if(S.view==='inv') rInvoices(); else if(S.view==='cal') rCalendar();
-  else if(S.view==='cli') rClients(); else rSettings(); }
+  else if(S.view==='cli') rClients(); else if(S.view==='sum') rSummary(); else rSettings(); }
 
 // ---------- CÁLCULO ----------
 function invTotals(inv){
@@ -891,6 +895,91 @@ function dayDetail(iso){
       <div class="amt"><div style="font-weight:700">${totalLabel(i)}</div>
       <span class="badge ${i.status==='paid'?'paid':isLate(i)?'late':'unpaid'}">${i.status==='paid'?t('bPaid'):isLate(i)?t('bLate'):t('bUnpaid')}</span></div></div>`;}).join('')
     +`<div class="row" style="margin-top:12px"><button class="btn-g" onclick="closeSheet()">${t('closeBtn')}</button></div>`);
+}
+
+// ---------- RESUMO ----------
+function rSummary(){
+  const el = document.getElementById('v-sum');
+  const y = S.sumY;
+  const fx = S.fx || 1.17;
+  const inYear = S.invoices.filter(i => (i.issue_date||'').slice(0,4) === String(y));
+  const mon = todayISO().slice(0,7);
+  const zero = () => ({eur:0, EUR:0, GBP:0, n:0});
+  const g = {all:zero(), paid:zero(), due:zero(), late:zero(), month:zero()};
+  const add = (b, i) => { const t = invTotals(i);
+    b.EUR += t.EUR.tot; b.GBP += t.GBP.tot; b.eur += t.EUR.tot + t.GBP.tot*fx; b.n++; };
+  const byCo = {};
+  inYear.forEach(i => {
+    add(g.all, i);
+    add(i.status==='paid' ? g.paid : isLate(i) ? g.late : g.due, i);
+    if((i.issue_date||'').slice(0,7) === mon) add(g.month, i);
+    const c = clientOf(i); const k = c ? c.company : '—';
+    const r = byCo[k] = byCo[k] || {tot:0, paid:0, open:0};
+    const t = invTotals(i); const v = t.EUR.tot + t.GBP.tot*fx;
+    r.tot += v; if(i.status==='paid') r.paid += v; else r.open += v;
+  });
+  const owed = g.due.eur + g.late.eur;
+  const pct = g.all.eur ? Math.round(g.paid.eur / g.all.eur * 100) : 0;
+  const split = b => [b.EUR?EUR(b.EUR):'', b.GBP?GBP(b.GBP):''].filter(Boolean).join(' + ') || EUR(0);
+
+  const segs = [
+    {k:'paid', v:g.paid.eur, c:'var(--green)', l:t('sumPaid'), b:g.paid},
+    {k:'due',  v:g.due.eur,  c:'var(--amber)', l:t('sumDue'),  b:g.due},
+    {k:'late', v:g.late.eur, c:'var(--red)',   l:t('sumLate'), b:g.late},
+  ];
+  const R = 70, C = 2*Math.PI*R;
+  let off = 0, arcs = '';
+  if(g.all.eur > 0){
+    segs.forEach(s => { if(!s.v) return;
+      const len = s.v / g.all.eur * C;
+      arcs += `<circle cx="90" cy="90" r="${R}" fill="none" stroke="${s.c}" stroke-width="22"
+        stroke-dasharray="${Math.max(len-2,0.01)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 90 90)"/>`;
+      off += len; });
+  } else {
+    arcs = `<circle cx="90" cy="90" r="${R}" fill="none" stroke="var(--line)" stroke-width="22"/>`;
+  }
+  const donut = `<svg viewBox="0 0 180 180" width="200" height="200" role="img" aria-label="${t('sumTitle')}">
+    ${arcs}
+    <text x="90" y="84" text-anchor="middle" fill="var(--tx2)" font-size="11">${t('sumEarned')}</text>
+    <text x="90" y="102" text-anchor="middle" fill="var(--tx)" font-size="17" font-weight="700">${EUR(g.all.eur)}</text>
+    <text x="90" y="119" text-anchor="middle" fill="var(--green)" font-size="11" font-weight="700">${pct}% ${t('sumPaidPct')}</text>
+  </svg>`;
+
+  const legend = segs.map(s => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)">
+      <div><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${s.c};margin-right:7px"></i>${s.l}
+        <div style="font-size:12px;color:var(--tx2);margin-left:17px">${s.b.n} ${s.b.n===1?t('invoice'):t('invoices')} · ${split(s.b)}</div></div>
+      <b>${EUR(s.v)}</b></div>`).join('');
+
+  const card = (lbl, val, sub, color) => `<div class="card" style="flex:1;min-width:140px;margin:0">
+    <div style="font-size:12px;color:var(--tx2)">${lbl}</div>
+    <div style="font-size:20px;font-weight:700;margin-top:4px;color:${color||'var(--tx)'}">${val}</div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:2px">${sub}</div></div>`;
+
+  const coRows = Object.keys(byCo).sort((a,b)=>byCo[b].tot-byCo[a].tot).map(k => { const r = byCo[k];
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between"><b style="font-size:14px">${esc(k)}</b><b>${EUR(r.tot)}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:3px">
+        <span style="color:var(--green)">${t('sumPaid')}: ${EUR(r.paid)}</span>
+        <span style="color:${r.open?'var(--amber)':'var(--tx2)'}">${t('sumOwed')}: ${EUR(r.open)}</span></div></div>`; }).join('');
+
+  el.innerHTML = `
+  <div class="cal-head">
+    <button class="btn-g" onclick="S.sumY--;rSummary()">‹</button>
+    <h3>${t('sumYear')} ${y}</h3>
+    <button class="btn-g" onclick="S.sumY++;rSummary()">›</button></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    ${card(t('sumEarned'), EUR(g.all.eur), `${g.all.n} ${g.all.n===1?t('invoice'):t('invoices')}`)}
+    ${card(t('sumPaid'), EUR(g.paid.eur), `${pct}%`, 'var(--green)')}
+    ${card(t('sumOwed'), EUR(owed), g.late.n ? `⚠ ${g.late.n} ${t('lateN')}` : '—', owed?'var(--amber)':null)}
+    ${y===new Date().getFullYear() ? card(t('sumMonth'), EUR(g.month.eur), `${g.month.n} ${g.month.n===1?t('invoice'):t('invoices')}`) : ''}
+  </div>
+  <div class="card" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center">
+    <div>${donut}</div>
+    <div style="flex:1;min-width:220px">${legend}</div>
+  </div>
+  ${coRows ? `<div class="card"><h3 style="margin-bottom:4px;font-size:15px">${t('sumByCo')}</h3>${coRows}</div>` : ''}
+  <p class="hint">${t('sumNote').replace('{fx}', (S.fx||1.17).toFixed(4))}${S.fx?'':' '+t('sumNoFx')}</p>`;
 }
 
 // ---------- CLIENTES ----------
