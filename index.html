@@ -70,7 +70,11 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
 .total-box .tr{display:flex;justify-content:space-between;padding:3px 0;font-size:15px}
 .total-box .tr.big{font-size:18px;font-weight:700;border-top:1px solid var(--line);margin-top:6px;padding-top:9px}
 .cal-head{display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid{display:grid;grid-template-columns:30px repeat(7,1fr);gap:4px}
+.cal-wk{display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--tx2);
+  background:var(--bg2);border-radius:6px}
+.cal-wk.now{background:var(--acc);color:#fff;font-weight:700}
+.cal-day.wk-now{background:#2a2f3a}
 .cal-dow{text-align:center;font-size:11px;color:var(--tx2);padding:4px 0}
 .cal-day{min-height:58px;background:var(--card);border:1px solid var(--line);border-radius:8px;
   padding:4px;font-size:12px;position:relative;cursor:pointer}
@@ -171,7 +175,8 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   needClient:'Cria primeiro um cliente (separador Clientes).',pdfDone:'PDF gerado ⬇',
   pdfFallback:'PDF descarregado — anexa-o no email que abriu.',
   thisMonth:'Este mês por receber:',nothing:'nada 🎉',dueOn:'Vencem a',
-  legPaid:'Paga',legDue:'A vencer',legLate:'Em atraso',dows:['S','T','Q','Q','S','S','D'],locale:'pt-PT',
+  legPaid:'Paga',legDue:'A vencer',legLate:'Em atraso',dows:['Sáb','Dom','Seg','Ter','Qua','Qui','Sex'],locale:'pt-PT',
+  todayWord:'Hoje',weekWord:'Semana',weekAbbr:'Sem',
   emptyCli:'Sem clientes.<br>Toca em <b style="color:var(--acc)">+</b> para criar o primeiro.',
   noEmail:'sem email',editCli:'Editar cliente',newCli:'Novo cliente',companyLbl:'Empresa *',
   contactLbl:'Nome de contacto',emailsLbl:'Emails (separados por vírgula — podem ser vários)',
@@ -226,7 +231,8 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   needClient:'Create a client first (Clients tab).',pdfDone:'PDF generated ⬇',
   pdfFallback:'PDF downloaded — attach it to the email that opened.',
   thisMonth:'Outstanding this month:',nothing:'nothing 🎉',dueOn:'Due on',
-  legPaid:'Paid',legDue:'Upcoming',legLate:'Overdue',dows:['M','T','W','T','F','S','S'],locale:'en-GB',
+  legPaid:'Paid',legDue:'Upcoming',legLate:'Overdue',dows:['Sat','Sun','Mon','Tue','Wed','Thu','Fri'],locale:'en-GB',
+  todayWord:'Today',weekWord:'Week',weekAbbr:'Wk',
   emptyCli:'No clients yet.<br>Tap <b style="color:var(--acc)">+</b> to create the first one.',
   noEmail:'no email',editCli:'Edit client',newCli:'New client',companyLbl:'Company *',
   contactLbl:'Contact name',emailsLbl:'Emails (comma-separated — can be several)',
@@ -691,7 +697,7 @@ function openMailto(){
 function rCalendar(){
   const el = document.getElementById('v-cal');
   const y=S.calY, m=S.calM;
-  const first = new Date(y,m,1); const start=(first.getDay()+6)%7; // seg=0
+  const first = new Date(y,m,1); const start=(first.getDay()+1)%7; // sáb=0
   const days = new Date(y,m+1,0).getDate();
   const mn = first.toLocaleDateString(t('locale'),{month:'long',year:'numeric'});
   const mon = `${y}-${String(m+1).padStart(2,'0')}`;
@@ -702,13 +708,34 @@ function rCalendar(){
       const iso = `${mon}-${String(d).padStart(2,'0')}`;
       if(iso>=p.s && iso<=p.e){ (byDay[d]=byDay[d]||[]).push(i); inMonth.add(i.id); }
     }});
-  let grid = t('dows').map(d=>`<div class="cal-dow">${d}</div>`).join('');
-  for(let i=0;i<start;i++) grid+=`<div></div>`;
   const td = todayISO();
+  function isoWeek(date){
+    const dt = new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+    const day = (dt.getUTCDay()+6)%7; dt.setUTCDate(dt.getUTCDate()-day+3);
+    const jan4 = new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+    return 1+Math.round(((dt-jan4)/86400000 - 3 + ((jan4.getUTCDay()+6)%7))/7);
+  }
+  const localISO = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  function weekCell(satDate){
+    const sat = localISO(satDate);
+    const friD = new Date(satDate); friD.setDate(friD.getDate()+6);
+    const now = td>=sat && td<=localISO(friD);
+    return `<div class="cal-wk ${now?'now':''}">W${isoWeek(satDate)}</div>`;
+  }
+  const curSatD = new Date(); curSatD.setDate(curSatD.getDate() - (curSatD.getDay()+1)%7);
+  const curSat = localISO(curSatD);
+  const curFriD = new Date(curSatD); curFriD.setDate(curFriD.getDate()+6);
+  const curFri = localISO(curFriD);
+  let grid = `<div class="cal-dow" style="font-size:10px">${t('weekAbbr')}</div>`
+    + t('dows').map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  grid += weekCell(new Date(y,m,1-start));
+  for(let i=0;i<start;i++) grid+=`<div></div>`;
   for(let d=1;d<=days;d++){
+    if(d>1 && (start+d-1)%7===0) grid += weekCell(new Date(y,m,d));
     const iso = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const inWk = iso>=curSat && iso<=curFri;
     const invs = byDay[d]||[];
-    grid += `<div class="cal-day ${iso===td?'today':''}" ${invs.length?`onclick="dayDetail('${iso}')"`:''}>
+    grid += `<div class="cal-day ${iso===td?'today':''} ${inWk?'wk-now':''}" ${invs.length?`onclick="dayDetail('${iso}')"`:''}>
       <span class="n">${d}</span>
       ${invs.map(i=>{ const p=periodOf(i);
         const cls = i.status==='paid'?'paid': isLate(i)?'late':'due';
@@ -720,8 +747,11 @@ function rCalendar(){
   S.invoices.filter(i=>inMonth.has(i.id)).forEach(i=>{ if(i.status!=='paid'){ const t=invTotals(i);
     me+=t.EUR.tot; mg+=t.GBP.tot; if(isLate(i))ml++; }});
   const p=[]; if(me)p.push(EUR(me)); if(mg)p.push(GBP(mg));
+  const now = new Date();
+  const todayLine = `${t('todayWord')}: ${now.toLocaleDateString(t('locale'),{weekday:'long'})}, ${dmy(td)} · ${t('weekWord')} ${isoWeek(now)}`;
   el.innerHTML = `
-  <div class="banner">${t('thisMonth')} <b>${p.join(' + ')||t('nothing')}</b>
+  <div class="banner"><div style="color:var(--acc);font-weight:700;margin-bottom:4px;text-transform:capitalize">${todayLine}</div>
+    ${t('thisMonth')} <b>${p.join(' + ')||t('nothing')}</b>
     ${ml?`<div style="color:var(--amber);margin-top:4px">⚠ ${ml} ${t('lateN')}</div>`:''}</div>
   <div class="cal-head">
     <button class="btn-g" onclick="calNav(-1)">‹</button>
