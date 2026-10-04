@@ -575,85 +575,194 @@ async function delInvoice(){
 
 // ---------- PDF ----------
 const PDFL = {
-  pt:{from:'DE',to:'PARA',desc:'DESCRIÇÃO',qty:'QT',price:'PREÇO',total:'TOTAL',sub:'Subtotal',
-      vat:'IVA',conv:'Total em €',paid:'✓ PAGA / PAID',pay:'Pagamento / Payment',nif:'NIF',
-      no:'Nº',date:'Data',due:'Vencimento',period:'Período',
-      fxwarn:'Taxa de câmbio do dia da emissão. O valor em € é indicativo e pode variar à data do pagamento — confirmar sempre o câmbio do dia.'},
-  en:{from:'FROM',to:'BILL TO',desc:'DESCRIPTION',qty:'QTY',price:'PRICE',total:'TOTAL',sub:'Subtotal',
-      vat:'VAT',conv:'Total in €',paid:'✓ PAID',pay:'Payment',nif:'Tax ID',
-      no:'No.',date:'Date',due:'Due date',period:'Period',
-      fxwarn:'Exchange rate as of the issue date. The € amount is indicative and may differ on the payment date — always check the current rate first.'}
+  pt:{title:'FATURA',from:'DE',to:'PARA',desc:'DESCRIÇÃO',qty:'QTD',price:'PREÇO UNIT.',total:'TOTAL',
+      sub:'Subtotal',vat:'IVA',totalCur:'Total',conv:'Total em EUR',rate:'Câmbio',due:'VALOR A PAGAR',
+      paid:'PAGA',pay:'DADOS DE PAGAMENTO',bank:'Banco',holder:'Titular',nif:'NIF',notes:'NOTAS',
+      no:'Fatura nº',date:'Data',period:'Período',page:'Página',locale:'pt-PT',
+      fxwarn:'Valor em EUR indicativo, calculado com o câmbio do dia de emissão. A taxa pode ser diferente no dia do pagamento: confirme sempre o câmbio do dia.'},
+  en:{title:'INVOICE',from:'FROM',to:'BILL TO',desc:'DESCRIPTION',qty:'QTY',price:'UNIT PRICE',total:'AMOUNT',
+      sub:'Subtotal',vat:'VAT',totalCur:'Total',conv:'Total in EUR',rate:'Exchange rate',due:'AMOUNT DUE',
+      paid:'PAID',pay:'PAYMENT DETAILS',bank:'Bank',holder:'Account name',nif:'Tax ID',notes:'NOTES',
+      no:'Invoice no.',date:'Date',period:'Period',page:'Page',locale:'en-GB',
+      fxwarn:'The EUR amount is indicative, based on the exchange rate on the issue date. The rate may differ on the payment date: please always check the current rate first.'}
 };
 function buildPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm',format:'a4'});
-  const c = clientOf(E)||{}; const st = S.settings; const t = invTotals(E);
+  const c = clientOf(E)||{}; const st = S.settings; const T = invTotals(E);
   const P = PDFL[c.language==='pt'?'pt':'en'];
-  const W=210, M=18; let y=24;
-  doc.setTextColor(30,33,40); doc.setFont('helvetica','bold'); doc.setFontSize(26);
-  doc.text('INVOICE', M, y);
-  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(110,115,125);
-  doc.text(`${P.no} ${E.number}`, W-M, y-6, {align:'right'});
-  doc.text(`${P.date}: ${dmy(E.issue_date)}`, W-M, y-1, {align:'right'});
+  const money = (v,cur) => new Intl.NumberFormat(P.locale,{style:'currency',currency:cur}).format(v||0);
+  const hasId = v => { const x=(v||'').trim(); return x && x!=='0' && x!=='-'; };
+  const W=210, H=297, M=18, CW=W-2*M;
+  const INK=[30,33,40], MUTED=[115,120,130], LINE=[226,228,234], ACC=[47,92,190];
+  const col = a => doc.setTextColor(a[0],a[1],a[2]);
+  const font = (style,size) => { doc.setFont('helvetica',style); doc.setFontSize(size); };
+  const lh = size => size*0.42;
+  let y = 0;
+  const ensure = need => { if(y+need > H-22){ doc.addPage(); y = 22; return true; } return false; };
+
+  doc.setFillColor(ACC[0],ACC[1],ACC[2]); doc.rect(0,0,W,4,'F');
+
+  y = 22;
+  font('bold',28); col(INK); doc.text(P.title, M, y);
+  if(E.status==='paid'){
+    const tw = doc.getTextWidth(P.title);
+    doc.setDrawColor(46,160,100); doc.setLineWidth(0.6);
+    font('bold',11); const pw = doc.getTextWidth(P.paid)+8;
+    doc.roundedRect(M+tw+6, y-7, pw, 8.5, 1.5, 1.5, 'S');
+    doc.setTextColor(46,160,100); doc.text(P.paid, M+tw+10, y-1.2);
+    doc.setLineWidth(0.2);
+  }
+  const meta = [[P.no, E.number],[P.date, dmy(E.issue_date)]];
   const pp = periodOf(E);
-  if(pp) doc.text(`${P.period}: ${dmy(pp.s)}${pp.e!==pp.s?' - '+dmy(pp.e):''}`, W-M, y+4, {align:'right'});
-  y+=14; doc.setDrawColor(220,222,228); doc.line(M,y,W-M,y); y+=9;
-  doc.setTextColor(110,115,125); doc.setFontSize(8.5);
-  doc.text(P.from, M, y); doc.text(P.to, W/2+4, y); y+=5;
-  doc.setTextColor(30,33,40); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
-  doc.text(st.business_name||'', M, y); doc.text(c.company||'', W/2+4, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(70,75,85);
-  let yl=y, yr=y;
-  (st.address||'').split('\n').forEach(l=>{ yl+=4.6; doc.text(l,M,yl); });
-  if(st.nif){ yl+=4.6; doc.text(P.nif+': '+st.nif, M, yl); }
-  [(c.contact_name||''),(c.address||'')].join('\n').split('\n').filter(Boolean).forEach(l=>{ yr+=4.6; doc.text(l,W/2+4,yr); });
-  if(c.nif){ yr+=4.6; doc.text(P.nif+': '+c.nif, W/2+4, yr); }
-  y = Math.max(yl,yr)+12;
-  // tabela
-  doc.setFillColor(243,244,247); doc.rect(M,y-5,W-2*M,8,'F');
-  doc.setFontSize(8.5); doc.setTextColor(110,115,125); doc.setFont('helvetica','bold');
-  doc.text(P.desc,M+2,y); doc.text(P.qty,W-M-58,y,{align:'right'});
-  doc.text(P.price,W-M-32,y,{align:'right'}); doc.text(P.total,W-M-2,y,{align:'right'});
-  y+=8; doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(30,33,40);
-  (E.lines||[]).forEach(l=>{
-    const tot=(Number(l.qty)||0)*(Number(l.price)||0);
-    doc.text(String(l.desc||''), M+2, y, {maxWidth:W-2*M-70});
-    doc.text(String(l.qty||0), W-M-58, y, {align:'right'});
-    doc.text(fmt(Number(l.price)||0,l.currency), W-M-32, y, {align:'right'});
-    doc.text(fmt(tot,l.currency), W-M-2, y, {align:'right'});
-    y+=7; doc.setDrawColor(238,239,243); doc.line(M,y-4.5,W-M,y-4.5);
-    if(y>250){ doc.addPage(); y=24; }
+  if(pp) meta.push([P.period, pp.e!==pp.s ? `${dmy(pp.s)} - ${dmy(pp.e)}` : dmy(pp.s)]);
+  let my = 13;
+  meta.forEach(([k,v])=>{
+    font('normal',8.5); col(MUTED); doc.text(k.toUpperCase(), W-M-62, my);
+    font('bold',10); col(INK); doc.text(String(v), W-M, my, {align:'right'});
+    my += 5.6;
   });
-  y+=4;
-  const tx=(lbl,val,big)=>{ doc.setFont('helvetica',big?'bold':'normal'); doc.setFontSize(big?12:10);
-    doc.setTextColor(big?30:90,big?33:95,big?40:105);
-    doc.text(lbl, W-M-60, y); doc.text(val, W-M-2, y, {align:'right'}); y+=big?7.5:6; };
-  ['EUR','GBP'].forEach(cc=>{ if(t[cc].tot){
-    if(E.vat_rate!=null){ tx(`${P.sub} ${cc==='EUR'?'€':'£'}`, fmt(t[cc].sub,cc));
-      tx(`${P.vat} ${E.vat_rate}%`, fmt(t[cc].vat,cc)); }
-    tx(`${P.total} ${cc==='EUR'?'€':'£'}`, fmt(t[cc].tot,cc), true); }});
-  if(E.convert_total && S.fx && t.GBP.tot){
-    tx(`${P.conv} (1£=${S.fx.toFixed(4)}€)`, EUR(convertedTotal(E)), true);
-    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,120,40);
-    doc.text(P.fxwarn, W-M-2, y, {align:'right', maxWidth:120}); y+=9; }
-  y+=6;
-  if(E.status==='paid'){ doc.setTextColor(46,160,100); doc.setFontSize(13); doc.setFont('helvetica','bold');
-    doc.text(P.paid, M, y); y+=8; }
-  doc.setTextColor(90,95,105); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  if(E.notes){ doc.text(E.notes, M, y, {maxWidth:W-2*M}); y+=10; }
+  y = Math.max(y, my) + 6;
+  doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.line(M, y, W-M, y);
+  y += 9;
+
+  const colW = CW/2 - 6, xL = M, xR = M + CW/2 + 6;
+  function party(x, label, name, lines){
+    let yy = y;
+    font('bold',8); col(MUTED); doc.text(label, x, yy); yy += 5.5;
+    font('bold',11); col(INK);
+    doc.splitTextToSize(name||'', colW).forEach(l=>{ doc.text(l, x, yy); yy += lh(11)+1; });
+    font('normal',9.5); col([70,75,85]);
+    lines.filter(s=>(s||'').trim()).forEach(txt=>{
+      doc.splitTextToSize(txt.trim(), colW).forEach(l=>{ doc.text(l, x, yy); yy += lh(9.5)+0.9; });
+    });
+    return yy;
+  }
+  const fromLines = [...(st.address||'').split('\n')];
+  if(hasId(st.nif)) fromLines.push(`${P.nif}: ${st.nif}`);
+  const toLines = [c.contact_name||'', ...(c.address||'').split('\n')];
+  if(hasId(c.nif)) toLines.push(`${P.nif}: ${c.nif}`);
+  const yA = party(xL, P.from, st.business_name, fromLines);
+  const yB = party(xR, P.to, c.company, toLines);
+  y = Math.max(yA, yB) + 8;
+
+  const xQty = M+112, xPrice = M+142, xTot = W-M-3, descW = 100;
+  function tableHead(){
+    doc.setFillColor(INK[0],INK[1],INK[2]); doc.rect(M, y, CW, 8, 'F');
+    font('bold',8); doc.setTextColor(255,255,255);
+    doc.text(P.desc, M+3, y+5.3);
+    doc.text(P.qty, xQty, y+5.3, {align:'right'});
+    doc.text(P.price, xPrice, y+5.3, {align:'right'});
+    doc.text(P.total, xTot, y+5.3, {align:'right'});
+    y += 8;
+  }
+  tableHead();
+  (E.lines||[]).forEach((l,i)=>{
+    font('normal',10);
+    const dl = doc.splitTextToSize(String(l.desc||''), descW);
+    const rh = Math.max(8, dl.length*(lh(10)+0.8) + 4);
+    if(ensure(rh)) tableHead();
+    if(i%2===1){ doc.setFillColor(247,248,250); doc.rect(M, y, CW, rh, 'F'); }
+    col(INK); font('normal',10);
+    dl.forEach((t,k)=> doc.text(t, M+3, y+5.3 + k*(lh(10)+0.8)));
+    const cur = l.currency==='GBP'?'GBP':'EUR';
+    const q = Number(l.qty)||0, pr = Number(l.price)||0;
+    doc.text(String(q), xQty, y+5.3, {align:'right'});
+    doc.text(money(pr,cur), xPrice, y+5.3, {align:'right'});
+    font('bold',10); doc.text(money(q*pr,cur), xTot, y+5.3, {align:'right'});
+    y += rh;
+    doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.line(M, y, W-M, y);
+  });
+  y += 8;
+
+  const bx = W-M-86, bw = 86;
+  const rows = [];
+  ['EUR','GBP'].forEach(cur=>{ if(!T[cur].tot) return;
+    if(E.vat_rate!=null){
+      rows.push({l:`${P.sub} ${cur}`, v:money(T[cur].sub,cur)});
+      rows.push({l:`${P.vat} ${E.vat_rate}% ${cur}`, v:money(T[cur].vat,cur)});
+    }
+    rows.push({l:`${P.totalCur} ${cur}`, v:money(T[cur].tot,cur), b:true});
+  });
+  const showConv = E.convert_total && S.fx && T.GBP.tot;
+  if(showConv){
+    rows.push({sep:true});
+    rows.push({l:P.conv, v:money(convertedTotal(E),'EUR'), b:true});
+    rows.push({l:`${P.rate}: 1 GBP = ${S.fx.toFixed(4)} EUR`, v:'', small:true});
+  }
+  const dueLines = showConv ? [money(convertedTotal(E),'EUR')]
+    : ['EUR','GBP'].filter(cur=>T[cur].tot).map(cur=>money(T[cur].tot,cur));
+  if(!dueLines.length) dueLines.push(money(0,'EUR'));
+  ensure(rows.length*7 + dueLines.length*7 + 16);
+  rows.forEach(r=>{
+    if(r.sep){ doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.line(bx+4, y-3.5, W-M-4, y-3.5); y += 2; return; }
+    if(r.small){ font('italic',8); col(MUTED); doc.text(r.l, bx+4, y); y += 5; return; }
+    font(r.b?'bold':'normal', r.b?10.5:9.5); col(r.b?INK:[80,85,95]);
+    doc.text(r.l, bx+4, y); doc.text(r.v, W-M-4, y, {align:'right'});
+    y += 6.5;
+  });
+  y += 1;
+  const dh = 6 + dueLines.length*7;
+  doc.setFillColor(ACC[0],ACC[1],ACC[2]); doc.roundedRect(bx, y, bw, dh, 1.5, 1.5, 'F');
+  doc.setTextColor(255,255,255); font('bold',9); doc.text(P.due, bx+4, y+7.4);
+  font('bold',13);
+  dueLines.forEach((d,k)=> doc.text(d, W-M-4, y+7.4 + k*7, {align:'right'}));
+  y += dh + 6;
+
+  if(showConv){
+    font('italic',8.2);
+    const wl = doc.splitTextToSize(P.fxwarn, CW-8);
+    const wh = wl.length*(lh(8.2)+0.8) + 5;
+    ensure(wh+4);
+    doc.setFillColor(253,246,227); doc.rect(M, y, CW, wh, 'F');
+    doc.setFillColor(214,160,40); doc.rect(M, y, 1.2, wh, 'F');
+    doc.setTextColor(120,90,20);
+    wl.forEach((l,k)=> doc.text(l, M+4, y+4.6 + k*(lh(8.2)+0.8)));
+    y += wh + 7;
+  }
+
+  if((E.notes||'').trim()){
+    font('normal',9.5);
+    const nl = doc.splitTextToSize(E.notes.trim(), CW);
+    ensure(nl.length*(lh(9.5)+0.9) + 10);
+    font('bold',8); col(MUTED); doc.text(P.notes, M, y); y += 5;
+    font('normal',9.5); col([60,65,75]);
+    nl.forEach(l=>{ doc.text(l, M, y); y += lh(9.5)+0.9; });
+    y += 6;
+  }
+
   const bank = (S.banks||[]).find(b=>b.id===E.bank_id);
-  const bl = [];
+  const pr = [];
   if(bank){
-    bl.push(P.pay+(bank.bank_name?' — '+bank.bank_name:'')+':');
-    if(bank.holder) bl.push((c.language==='pt'?'Titular: ':'Name: ')+bank.holder);
-    if(bank.iban)   bl.push('IBAN: '+bank.iban);
-    if(bank.swift)  bl.push('SWIFT/BIC: '+bank.swift);
-    if(bank.extra)  bl.push(bank.extra);
-  } else if(st.iban){ bl.push(P.pay+': '+st.iban); }
-  if(st.extra) bl.push(st.extra);
-  let by = 288 - bl.length*4.6;
-  doc.setDrawColor(230,232,238); if(bl.length) doc.line(M, by-4, W-M, by-4);
-  bl.forEach(l=>{ doc.text(l, M, by); by+=4.6; });
+    if(bank.bank_name) pr.push([P.bank, bank.bank_name]);
+    if(bank.holder)    pr.push([P.holder, bank.holder]);
+    if(bank.iban)      pr.push(['IBAN', bank.iban]);
+    if(bank.swift)     pr.push(['SWIFT / BIC', bank.swift]);
+    if(bank.extra)     pr.push(['', bank.extra]);
+  } else if((st.iban||'').trim()){ pr.push(['IBAN', st.iban]); }
+  if(pr.length){
+    const ph = 10 + pr.length*5.6;
+    ensure(ph+4);
+    doc.setFillColor(245,246,249); doc.rect(M, y, CW, ph, 'F');
+    font('bold',8); col(MUTED); doc.text(P.pay, M+4, y+6);
+    let yy = y+12;
+    pr.forEach(([k,v])=>{
+      font('normal',9); col(MUTED); doc.text(k, M+4, yy);
+      font('bold',9.5); col(INK); doc.text(String(v), M+38, yy);
+      yy += 5.6;
+    });
+    y += ph + 4;
+  }
+
+  const n = doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){
+    doc.setPage(i);
+    doc.setDrawColor(LINE[0],LINE[1],LINE[2]); doc.line(M, H-14, W-M, H-14);
+    font('normal',7.5); col(MUTED);
+    const left = [st.business_name, hasId(st.nif)?`${P.nif}: ${st.nif}`:'', st.extra].filter(Boolean).join('  ·  ');
+    doc.text(doc.splitTextToSize(left, CW-30)[0]||'', M, H-9);
+    doc.text(`${P.page} ${i}/${n}`, W-M, H-9, {align:'right'});
+  }
   return doc;
 }
 function pdfName(){ const c=clientOf(E); return `Invoice_${E.number.replace(/[^\w-]/g,'_')}_${(c?c.company:'').replace(/[^\w]/g,'')}.pdf`; }
