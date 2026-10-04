@@ -86,6 +86,7 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
 .dot.paid{background:rgba(46,204,113,.2);color:var(--green)}
 .dot.due{background:rgba(245,185,66,.2);color:var(--amber)}
 .dot.late{background:rgba(255,92,92,.22);color:var(--red)}
+.dot.pay{background:rgba(79,140,255,.22);color:var(--acc);border:1px dashed var(--acc)}
 .legend{display:flex;gap:14px;margin-top:12px;font-size:12px;color:var(--tx2)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
 #login{max-width:380px;margin:12vh auto;padding:0 20px}
@@ -212,6 +213,7 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   noBanksHint:'Ainda não tens contas bancárias. Adiciona-as nas Definições para apareceram no PDF.',
   startLbl:'Início do trabalho',endLbl:'Fim do trabalho',
   periodHint:'O calendário pinta todos os dias entre o início e o fim.',
+  termsLbl:'Prazo de pagamento',termsWeek:'Na própria semana (ex: Per Diem)',terms7:'7 dias',terms14:'14 dias',terms30:'30 dias (ex: Wind Farm / horas)',termsCustom:'Outro nº de dias',daysLbl:'Dias',dueIs:'Vence a',termsHint:'Faturas com "PD" no número ficam logo "na própria semana"; as outras ficam a 30 dias da data da fatura. Podes mudar sempre.',payShort:'Pag.',legPay:'Dia de pagamento',
   fxWarnApp:'⚠ Câmbio de hoje — no dia do pagamento a taxa pode ser outra. Confirma sempre o câmbio do dia.',
   dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)'},
 en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
@@ -270,6 +272,7 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   noBanksHint:'No bank accounts yet. Add them in Settings so they appear on the PDF.',
   startLbl:'Work start date',endLbl:'Work end date',
   periodHint:'The calendar marks every day between start and end.',
+  termsLbl:'Payment terms',termsWeek:'Within the same week (e.g. Per Diem)',terms7:'7 days',terms14:'14 days',terms30:'30 days (e.g. Wind Farm / hours)',termsCustom:'Other number of days',daysLbl:'Days',dueIs:'Due on',termsHint:'Invoices with "PD" in the number default to "same week"; the others to 30 days from the invoice date. You can always change it.',payShort:'Pay',legPay:'Payment day',
   fxWarnApp:'⚠ Today\'s rate — it may differ on the payment date. Always check the current rate first.',
   dueModeLbl:'Amount due on the PDF',dueConv:'1 amount: converted total in €',dueBoth:'2 amounts: € + £ (each part in its own currency)'}
 };
@@ -399,8 +402,20 @@ function periodOf(inv){
   const s = inv.period_start || inv.due_date, e = inv.period_end || inv.due_date;
   return s ? {s, e: e&&e>=s ? e : s} : null;
 }
-function isLate(inv){ const p = periodOf(inv);
-  return inv.status!=='paid' && p && p.e < todayISO(); }
+function addDaysISO(iso, n){ const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d+n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+function termsFor(number){ return /(^|[^A-Z])PD([^A-Z]|$)/i.test(number||'') ? 'week' : '30'; }
+function dueOf(inv){
+  if(inv.pay_terms){
+    if(inv.pay_terms==='week') return inv.period_end || inv.issue_date || null;
+    const n = inv.pay_terms==='custom' ? (Number(inv.pay_days)||0) : Number(inv.pay_terms);
+    return inv.issue_date ? addDaysISO(inv.issue_date, n) : null;
+  }
+  const p = periodOf(inv); return inv.due_date || (p && p.e) || null;
+}
+function isLate(inv){ const d = dueOf(inv);
+  return inv.status!=='paid' && !!d && d < todayISO(); }
 function clientOf(inv){ return S.clients.find(c=>c.id===inv.client_id); }
 
 // ---------- FATURAS (lista) ----------
@@ -440,7 +455,7 @@ function rInvoices(){
       const late = isLate(i);
       html += `<div class="card inv-item" onclick="editInvoice('${i.id}')">
         <div><b>${esc(i.number)}</b>
-          <div style="font-size:13px;color:var(--tx2)">${dmy(i.issue_date)}${(p=>p?` · ${dmy(p.s)}${p.e!==p.s?' → '+dmy(p.e):''}`:'')(periodOf(i))}</div></div>
+          <div style="font-size:13px;color:var(--tx2)">${dmy(i.issue_date)}${(p=>p?` · ${dmy(p.s)}${p.e!==p.s?' → '+dmy(p.e):''}`:'')(periodOf(i))}${dueOf(i)&&i.status!=='paid'?`<br>${t('dueIs')} ${dmy(dueOf(i))}`:''}</div></div>
         <div class="amt"><div style="font-weight:700">${totalLabel(i)}</div>
           <span class="badge ${i.status==='paid'?'paid':late?'late':'unpaid'}">
           ${i.status==='paid'?t('bPaid'):late?t('bLate'):t('bUnpaid')}</span></div></div>`;
@@ -460,9 +475,11 @@ function nextNumber(){
 }
 function editInvoice(id){
   if(!S.clients.length && !id){ toast(t('needClient')); go('cli'); return; }
+  editInvoice._touched = !!id;
   E = id ? JSON.parse(JSON.stringify(S.invoices.find(i=>i.id===id)))
          : { id:null, client_id:S.clients[0].id, number:nextNumber(), issue_date:todayISO(),
              due_date:'', period_start:'', period_end:'', status:'unpaid', vat_rate:null,
+             pay_terms:null, pay_days:null,
              lines:[{desc:'',qty:1,price:'',currency:'EUR'}],
              notes:'', convert_total:false, bank_id:(S.banks&&S.banks[0]&&S.banks[0].id)||null };
   openSheet(invoiceForm());
@@ -473,16 +490,27 @@ function invoiceForm(){
   <h2 style="margin-bottom:4px">${E.id?t('invoiceWord')+' '+esc(E.number):t('newInvoice')}</h2>
   <label>${t('clientLbl')}</label><select onchange="E.client_id=this.value">${cliOpts}</select>
   <div class="row">
-    <div><label>${t('numberLbl')}</label><input value="${esc(E.number)}" oninput="E.number=this.value"></div>
-    <div><label>${t('dateLbl')}</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value"></div>
+    <div><label>${t('numberLbl')}</label><input value="${esc(E.number)}" oninput="E.number=this.value; if(!editInvoice._touched){ E.pay_terms=termsFor(this.value); syncTerms(); }"></div>
+    <div><label>${t('dateLbl')}</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value; drawDue()"></div>
   </div>
   <div class="row">
     <div><label>${t('startLbl')}</label><input type="date" value="${E.period_start||''}"
       onchange="E.period_start=this.value; if(!E.period_end||E.period_end<this.value) E.period_end=this.value;"></div>
     <div><label>${t('endLbl')}</label><input type="date" value="${E.period_end||''}"
-      onchange="E.period_end=this.value"></div>
+      onchange="E.period_end=this.value; drawDue()"></div>
   </div>
   <p class="hint" style="margin:4px 0 0">${t('periodHint')}</p>
+  <div class="row">
+    <div style="flex:2"><label>${t('termsLbl')}</label>
+      <select id="terms-sel" onchange="E.pay_terms=this.value; editInvoice._touched=true; syncTerms()">
+        ${[['week',t('termsWeek')],['7',t('terms7')],['14',t('terms14')],['30',t('terms30')],['custom',t('termsCustom')]]
+          .map(([v,l])=>`<option value="${v}" ${(E.pay_terms||'30')===v?'selected':''}>${l}</option>`).join('')}
+      </select></div>
+    <div id="days-box" class="${E.pay_terms==='custom'?'':'hidden'}" style="flex:1"><label>${t('daysLbl')}</label>
+      <input type="number" inputmode="numeric" value="${E.pay_days||''}" oninput="E.pay_days=Number(this.value)||0; drawDue()"></div>
+  </div>
+  <div id="due-txt" style="margin-top:8px;font-weight:700;color:var(--acc)"></div>
+  <p class="hint" style="margin:4px 0 0">${t('termsHint')}</p>
   <label>${t('linesLbl')}</label>
   <div id="lines"></div>
   <button class="btn-g" style="margin-top:8px" onclick="E.lines.push({desc:'',qty:1,price:'',currency:'EUR'});drawLines()">${t('addLine')}</button>
@@ -528,6 +556,20 @@ function invoiceForm(){
   <div class="row" style="margin-top:10px"><button class="btn-red" onclick="delInvoice()">${t('delInv')}</button></div>`:''}
   <div class="row" style="margin-top:10px"><button class="btn-g" onclick="closeSheet()">${t('closeBtn')}</button></div>`;
 }
+function syncTerms(){
+  const s = document.getElementById('terms-sel'); if(s) s.value = E.pay_terms || '30';
+  const b = document.getElementById('days-box'); if(b) b.classList.toggle('hidden', E.pay_terms!=='custom');
+  drawDue();
+}
+function drawDue(){
+  const el = document.getElementById('due-txt'); if(!el) return;
+  if(!E.pay_terms) E.pay_terms = termsFor(E.number);
+  const d = dueOf(E);
+  if(!d){ el.textContent=''; return; }
+  const [yy,mm,dd] = d.split('-').map(Number);
+  const wd = new Date(yy,mm-1,dd).toLocaleDateString(t('locale'),{weekday:'long'});
+  el.textContent = `${t('dueIs')}: ${wd}, ${dmy(d)}`;
+}
 function drawVat(on){ document.getElementById('vatbox').classList.toggle('hidden',!on);
   if(on) E.vat_rate = Number(document.getElementById('vatr').value); drawTotals(); }
 function drawLines(){
@@ -564,7 +606,9 @@ async function saveInvoice(){
   if(E.period_start && E.period_end && E.period_end < E.period_start){
     const x = E.period_start; E.period_start = E.period_end; E.period_end = x; }
   const rec = { user_id:S.user.id, client_id:E.client_id, number:E.number,
-    issue_date:E.issue_date||todayISO(), due_date:E.period_end||E.due_date||null,
+    issue_date:E.issue_date||todayISO(),
+    pay_terms:E.pay_terms||termsFor(E.number), pay_days:E.pay_terms==='custom'?(Number(E.pay_days)||0):null,
+    due_date:dueOf({...E, issue_date:E.issue_date||todayISO(), pay_terms:E.pay_terms||termsFor(E.number)}),
     period_start:E.period_start||null, period_end:E.period_end||null, status:E.status,
     vat_rate:E.vat_rate, lines:E.lines, notes:E.notes, convert_total:E.convert_total,
     due_mode:E.due_mode==='both'?'both':'converted',
@@ -593,11 +637,13 @@ const PDFL = {
       sub:'Subtotal',vat:'IVA',totalCur:'Total',conv:'Total em EUR',rate:'Câmbio',due:'VALOR A PAGAR',
       paid:'PAGA',pay:'DADOS DE PAGAMENTO',bank:'Banco',holder:'Titular',nif:'NIF',notes:'NOTAS',
       no:'Fatura nº',date:'Data',period:'Período',page:'Página',locale:'pt-PT',
+      dueDate:'Vencimento',terms:'Prazo',termsWeek:'Pagamento na própria semana',termsDays:'{n} dias',
       fxwarn:'Valor em EUR indicativo, calculado com o câmbio do dia de emissão. A taxa pode ser diferente no dia do pagamento: confirme sempre o câmbio do dia.'},
   en:{title:'INVOICE',from:'FROM',to:'BILL TO',desc:'DESCRIPTION',qty:'QTY',price:'UNIT PRICE',total:'AMOUNT',
       sub:'Subtotal',vat:'VAT',totalCur:'Total',conv:'Total in EUR',rate:'Exchange rate',due:'AMOUNT DUE',
       paid:'PAID',pay:'PAYMENT DETAILS',bank:'Bank',holder:'Account name',nif:'Tax ID',notes:'NOTES',
       no:'Invoice no.',date:'Date',period:'Period',page:'Page',locale:'en-GB',
+      dueDate:'Due date',terms:'Terms',termsWeek:'Payment within the same week',termsDays:'Net {n} days',
       fxwarn:'The EUR amount is indicative, based on the exchange rate on the issue date. The rate may differ on the payment date: please always check the current rate first.'}
 };
 function buildPDF(){
@@ -630,6 +676,8 @@ function buildPDF(){
   const meta = [[P.no, E.number],[P.date, dmy(E.issue_date)]];
   const pp = periodOf(E);
   if(pp) meta.push([P.period, pp.e!==pp.s ? `${dmy(pp.s)} - ${dmy(pp.e)}` : dmy(pp.s)]);
+  const dd = dueOf(E);
+  if(dd) meta.push([P.dueDate, dmy(dd)]);
   let my = 13;
   meta.forEach(([k,v])=>{
     font('normal',8.5); col(MUTED); doc.text(k.toUpperCase(), W-M-62, my);
@@ -754,6 +802,10 @@ function buildPDF(){
     if(bank.swift)     pr.push(['SWIFT / BIC', bank.swift]);
     if(bank.extra)     pr.push(['', bank.extra]);
   } else if((st.iban||'').trim()){ pr.push(['IBAN', st.iban]); }
+  const pt = E.pay_terms || termsFor(E.number);
+  const ptxt = pt==='week' ? P.termsWeek
+    : P.termsDays.replace('{n}', pt==='custom' ? (Number(E.pay_days)||0) : pt);
+  pr.push([P.terms, dd ? `${ptxt} (${P.dueDate.toLowerCase()} ${dmy(dd)})` : ptxt]);
   if(pr.length){
     const ph = 10 + pr.length*5.6;
     ensure(ph+4);
@@ -793,7 +845,7 @@ function buildEmail(){
   let body = (c.email_template&&c.email_template.trim()) ? c.email_template : defaultTemplate(lang);
   const total = E.convert_total&&S.fx&&E.due_mode!=='both' ? EUR(convertedTotal(E)) : totalLabel(E);
   body = body.replaceAll('{numero}',E.number).replaceAll('{total}',total)
-    .replaceAll('{vencimento}',dmy(E.due_date)).replaceAll('{empresa}',S.settings.business_name||'')
+    .replaceAll('{vencimento}',dmy(dueOf(E))).replaceAll('{empresa}',S.settings.business_name||'')
     .replaceAll('{cliente}',c.company||'');
   const subject = lang==='pt' ? `Fatura ${E.number} — ${S.settings.business_name||''}`
                               : `Invoice ${E.number} — ${S.settings.business_name||''}`;
@@ -829,8 +881,14 @@ function rCalendar(){
   S.invoices.forEach(i=>{ const p = periodOf(i); if(!p) return;
     for(let d=1; d<=daysInM; d++){
       const iso = `${mon}-${String(d).padStart(2,'0')}`;
-      if(iso>=p.s && iso<=p.e){ (byDay[d]=byDay[d]||[]).push(i); inMonth.add(i.id); }
+      if(iso>=p.s && iso<=p.e){ (byDay[d]=byDay[d]||[]).push(i); }
     }});
+  const payDay = {};
+  S.invoices.forEach(i=>{ const d = dueOf(i); const p = periodOf(i);
+    if(!d || d.slice(0,7)!==mon) return;
+    inMonth.add(i.id);
+    if(p && d===p.e) return;
+    (payDay[parseInt(d.slice(8))] = payDay[parseInt(d.slice(8))] || []).push(i); });
   const td = todayISO();
   function isoWeek(date){
     const dt = new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
@@ -858,13 +916,15 @@ function rCalendar(){
     if(d>1 && (start+d-1)%7===0) grid += weekCell(new Date(y,m,d));
     const iso = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const inWk = iso>=curSat && iso<=curFri;
-    const invs = byDay[d]||[];
-    grid += `<div class="cal-day ${iso===td?'today':''} ${inWk?'wk-now':''}" ${invs.length?`onclick="dayDetail('${iso}')"`:''}>
+    const invs = byDay[d]||[]; const pays = payDay[d]||[];
+    grid += `<div class="cal-day ${iso===td?'today':''} ${inWk?'wk-now':''}" ${(invs.length||pays.length)?`onclick="dayDetail('${iso}')"`:''}>
       <span class="n">${d}</span>
       ${invs.map(i=>{ const p=periodOf(i);
         const cls = i.status==='paid'?'paid': isLate(i)?'late':'due';
         const lbl = (p && iso===p.e) ? totalLabel(i) : '&nbsp;';
-        return `<span class="dot ${cls}">${lbl}</span>`; }).join('')}</div>`;
+        return `<span class="dot ${cls}">${lbl}</span>`; }).join('')}
+      ${pays.map(i=>{ const cls = i.status==='paid'?'paid': isLate(i)?'late':'pay';
+        return `<span class="dot ${cls}">${t('payShort')} ${totalLabel(i)}</span>`; }).join('')}</div>`;
   }
   // resumo do mês (cada fatura conta uma vez, mesmo ocupando vários dias)
   let me=0,mg=0,ml=0;
@@ -879,16 +939,17 @@ function rCalendar(){
     ${ml?`<div style="color:var(--amber);margin-top:4px">⚠ ${ml} ${t('lateN')}</div>`:''}</div>
   <div class="cal-head">
     <button class="btn-g" onclick="calNav(-1)">‹</button>
-    <h3 style="text-transform:capitalize">${mn}</h3>
+    <h3>${mn.charAt(0).toUpperCase()+mn.slice(1)}</h3>
     <button class="btn-g" onclick="calNav(1)">›</button></div>
   <div class="cal-grid">${grid}</div>
   <div class="legend"><span><i style="background:var(--green)"></i>${t('legPaid')}</span>
     <span><i style="background:var(--amber)"></i>${t('legDue')}</span>
-    <span><i style="background:var(--red)"></i>${t('legLate')}</span></div>`;
+    <span><i style="background:var(--red)"></i>${t('legLate')}</span>
+    <span><i style="background:transparent;border:1px dashed var(--acc)"></i>${t('legPay')}</span></div>`;
 }
 function calNav(d){ S.calM+=d; if(S.calM<0){S.calM=11;S.calY--;} if(S.calM>11){S.calM=0;S.calY++;} rCalendar(); }
 function dayDetail(iso){
-  const invs = S.invoices.filter(i=>{ const p=periodOf(i); return p && iso>=p.s && iso<=p.e; });
+  const invs = S.invoices.filter(i=>{ const p=periodOf(i); return (p && iso>=p.s && iso<=p.e) || dueOf(i)===iso; });
   openSheet(`<h2>${t('dueOn')} ${dmy(iso)}</h2>`+ invs.map(i=>{ const c=clientOf(i);
     return `<div class="card inv-item" onclick="closeSheet();editInvoice('${i.id}')">
       <div><b>${esc(i.number)}</b><div style="font-size:13px;color:var(--tx2)">${esc(c?c.company:'')}</div></div>
@@ -1110,6 +1171,7 @@ function openSheet(html){
   document.getElementById('sheet-body').innerHTML = html;
   document.getElementById('sheet').classList.remove('hidden');
   if(document.getElementById('lines')) drawLines();
+  if(document.getElementById('due-txt')) drawDue();
 }
 function closeSheet(){ document.getElementById('sheet').classList.add('hidden'); }
 applyLang();
