@@ -373,9 +373,14 @@ async function boot(session, offlineUser){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   const now = new Date(); S.calY=now.getFullYear(); S.calM=now.getMonth();
-  await loadAll(); loadFx(); go('inv'); updateNetBadge(); syncQueue();
+  const cached = loadCache();
+  if(cached){ go('inv'); updateNetBadge(); }
+  if(navigator.onLine || !cached){ await loadAll(); }
+  else { S.offline = true; }
+  go(cached ? S.view : 'inv'); updateNetBadge(); loadFx(); syncQueue();
 }
 async function loadAll(){
+  if(!navigator.onLine && loadCache()){ S.offline = true; updateNetBadge(); return; }
   let res = null;
   try{
     res = await Promise.all([
