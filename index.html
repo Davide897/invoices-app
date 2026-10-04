@@ -716,7 +716,7 @@ function rCalendar(){
     return 1+Math.round(((dt-jan4)/86400000 - 3 + ((jan4.getUTCDay()+6)%7))/7);
   }
   const localISO = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-  const wkNum = sunD => { const mon = new Date(sunD); mon.setDate(mon.getDate()+1); return isoWeek(mon); };
+  const wkNum = sunD => isoWeek(sunD);
   function weekCell(sunDate){
     const sun = localISO(sunDate);
     const satD = new Date(sunDate); satD.setDate(satD.getDate()+6);
