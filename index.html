@@ -213,7 +213,7 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   noBanksHint:'Ainda não tens contas bancárias. Adiciona-as nas Definições para apareceram no PDF.',
   startLbl:'Início do trabalho',endLbl:'Fim do trabalho',
   periodHint:'O calendário pinta todos os dias entre o início e o fim.',
-  termsLbl:'Prazo de pagamento',termsWeek:'Na própria semana (ex: Per Diem)',terms7:'7 dias',terms14:'14 dias',terms30:'30 dias (ex: Wind Farm / horas)',termsCustom:'Outro nº de dias',daysLbl:'Dias',dueIs:'Vence a',termsHint:'Faturas com "PD" no número ficam logo "na própria semana"; as outras ficam a 30 dias da data da fatura. Podes mudar sempre.',payShort:'Pag.',legPay:'Dia de pagamento',
+  termsLbl:'Prazo de pagamento',termsWeek:'Terça-feira da semana seguinte (ex: Per Diem)',terms7:'7 dias',terms14:'14 dias',terms30:'30 dias (ex: Wind Farm / horas)',termsCustom:'Outro nº de dias',daysLbl:'Dias',dueIs:'Vence a',termsHint:'Faturas com "PD" no número ficam a pagar na terça-feira da semana seguinte; as outras ficam a 30 dias da data da fatura. Podes mudar sempre.',payShort:'Pag.',legPay:'Dia de pagamento',
   fxWarnApp:'⚠ Câmbio de hoje — no dia do pagamento a taxa pode ser outra. Confirma sempre o câmbio do dia.',
   dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)'},
 en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
@@ -272,7 +272,7 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   noBanksHint:'No bank accounts yet. Add them in Settings so they appear on the PDF.',
   startLbl:'Work start date',endLbl:'Work end date',
   periodHint:'The calendar marks every day between start and end.',
-  termsLbl:'Payment terms',termsWeek:'Within the same week (e.g. Per Diem)',terms7:'7 days',terms14:'14 days',terms30:'30 days (e.g. Wind Farm / hours)',termsCustom:'Other number of days',daysLbl:'Days',dueIs:'Due on',termsHint:'Invoices with "PD" in the number default to "same week"; the others to 30 days from the invoice date. You can always change it.',payShort:'Pay',legPay:'Payment day',
+  termsLbl:'Payment terms',termsWeek:'Tuesday of the following week (e.g. Per Diem)',terms7:'7 days',terms14:'14 days',terms30:'30 days (e.g. Wind Farm / hours)',termsCustom:'Other number of days',daysLbl:'Days',dueIs:'Due on',termsHint:'Invoices with "PD" in the number default to Tuesday of the following week; the others to 30 days from the invoice date. You can always change it.',payShort:'Pay',legPay:'Payment day',
   fxWarnApp:'⚠ Today\'s rate — it may differ on the payment date. Always check the current rate first.',
   dueModeLbl:'Amount due on the PDF',dueConv:'1 amount: converted total in €',dueBoth:'2 amounts: € + £ (each part in its own currency)'}
 };
@@ -408,7 +408,12 @@ function addDaysISO(iso, n){ const [y,m,d] = iso.split('-').map(Number);
 function termsFor(number){ return /(^|[^A-Z])PD([^A-Z]|$)/i.test(number||'') ? 'week' : '30'; }
 function dueOf(inv){
   if(inv.pay_terms){
-    if(inv.pay_terms==='week') return inv.period_end || inv.issue_date || null;
+    if(inv.pay_terms==='week'){
+      const base = inv.period_end || inv.issue_date; if(!base) return null;
+      const [y,m,d] = base.split('-').map(Number);
+      const dow = new Date(y, m-1, d).getDay();
+      return addDaysISO(base, 9 - dow);
+    }
     const n = inv.pay_terms==='custom' ? (Number(inv.pay_days)||0) : Number(inv.pay_terms);
     return inv.issue_date ? addDaysISO(inv.issue_date, n) : null;
   }
@@ -637,13 +642,13 @@ const PDFL = {
       sub:'Subtotal',vat:'IVA',totalCur:'Total',conv:'Total em EUR',rate:'Câmbio',due:'VALOR A PAGAR',
       paid:'PAGA',pay:'DADOS DE PAGAMENTO',bank:'Banco',holder:'Titular',nif:'NIF',notes:'NOTAS',
       no:'Fatura nº',date:'Data',period:'Período',page:'Página',locale:'pt-PT',
-      dueDate:'Vencimento',terms:'Prazo',termsWeek:'Pagamento na própria semana',termsDays:'{n} dias',
+      dueDate:'Vencimento',terms:'Prazo',termsWeek:'Pagamento na terça-feira da semana seguinte',termsDays:'{n} dias',
       fxwarn:'Valor em EUR indicativo, calculado com o câmbio do dia de emissão. A taxa pode ser diferente no dia do pagamento: confirme sempre o câmbio do dia.'},
   en:{title:'INVOICE',from:'FROM',to:'BILL TO',desc:'DESCRIPTION',qty:'QTY',price:'UNIT PRICE',total:'AMOUNT',
       sub:'Subtotal',vat:'VAT',totalCur:'Total',conv:'Total in EUR',rate:'Exchange rate',due:'AMOUNT DUE',
       paid:'PAID',pay:'PAYMENT DETAILS',bank:'Bank',holder:'Account name',nif:'Tax ID',notes:'NOTES',
       no:'Invoice no.',date:'Date',period:'Period',page:'Page',locale:'en-GB',
-      dueDate:'Due date',terms:'Terms',termsWeek:'Payment within the same week',termsDays:'Net {n} days',
+      dueDate:'Due date',terms:'Terms',termsWeek:'Payment on Tuesday of the following week',termsDays:'Net {n} days',
       fxwarn:'The EUR amount is indicative, based on the exchange rate on the issue date. The rate may differ on the payment date: please always check the current rate first.'}
 };
 function buildPDF(){
