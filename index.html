@@ -209,7 +209,8 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   noBanksHint:'Ainda não tens contas bancárias. Adiciona-as nas Definições para apareceram no PDF.',
   startLbl:'Início do trabalho',endLbl:'Fim do trabalho',
   periodHint:'O calendário pinta todos os dias entre o início e o fim.',
-  fxWarnApp:'⚠ Câmbio de hoje — no dia do pagamento a taxa pode ser outra. Confirma sempre o câmbio do dia.'},
+  fxWarnApp:'⚠ Câmbio de hoje — no dia do pagamento a taxa pode ser outra. Confirma sempre o câmbio do dia.',
+  dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)'},
 en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
   hintLogin:'First time? Type your email and a password and tap "Create account". Use the same details on your phone and PC to see the same invoices.',
   logout:'Sign out',tInv:'Invoices',tCal:'Calendar',tCli:'Clients',tSet:'Settings',
@@ -265,7 +266,8 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   noBanksHint:'No bank accounts yet. Add them in Settings so they appear on the PDF.',
   startLbl:'Work start date',endLbl:'Work end date',
   periodHint:'The calendar marks every day between start and end.',
-  fxWarnApp:'⚠ Today\'s rate — it may differ on the payment date. Always check the current rate first.'}
+  fxWarnApp:'⚠ Today\'s rate — it may differ on the payment date. Always check the current rate first.',
+  dueModeLbl:'Amount due on the PDF',dueConv:'1 amount: converted total in €',dueBoth:'2 amounts: € + £ (each part in its own currency)'}
 };
 let L = localStorage.getItem('inv_lang') || 'pt';
 const t = k => (I18N[L] && I18N[L][k]) ?? I18N.pt[k] ?? k;
@@ -490,7 +492,14 @@ function invoiceForm(){
         oninput="E.vat_rate=Number(this.value);drawTotals()"></div>
   </div>
   <label><input type="checkbox" style="width:auto;margin-right:8px" ${E.convert_total?'checked':''}
-    onchange="E.convert_total=this.checked;drawTotals()">${t('convertLbl')}</label>
+    onchange="E.convert_total=this.checked;document.getElementById('duebox').classList.toggle('hidden',!this.checked);drawTotals()">${t('convertLbl')}</label>
+  <div id="duebox" class="${E.convert_total?'':'hidden'}">
+    <label style="margin-top:6px">${t('dueModeLbl')}</label>
+    <select onchange="E.due_mode=this.value">
+      <option value="converted" ${E.due_mode!=='both'?'selected':''}>${t('dueConv')}</option>
+      <option value="both" ${E.due_mode==='both'?'selected':''}>${t('dueBoth')}</option>
+    </select>
+  </div>
   <div class="total-box" id="totals"></div>
   <label>${t('bankSelLbl')}</label>
   ${(S.banks||[]).length ? `<select onchange="E.bank_id=this.value||null">
@@ -554,6 +563,7 @@ async function saveInvoice(){
     issue_date:E.issue_date||todayISO(), due_date:E.period_end||E.due_date||null,
     period_start:E.period_start||null, period_end:E.period_end||null, status:E.status,
     vat_rate:E.vat_rate, lines:E.lines, notes:E.notes, convert_total:E.convert_total,
+    due_mode:E.due_mode==='both'?'both':'converted',
     bank_id:E.bank_id||null, paid_at:E.status==='paid'?(E.paid_at||todayISO()):null };
   let res;
   if(E.id) res = await sb.from('inv_invoices').update(rec).eq('id',E.id).select().single();
@@ -690,7 +700,7 @@ function buildPDF(){
     rows.push({l:P.conv, v:money(convertedTotal(E),'EUR'), b:true});
     rows.push({l:`${P.rate}: 1 GBP = ${S.fx.toFixed(4)} EUR`, v:'', small:true});
   }
-  const dueLines = showConv ? [money(convertedTotal(E),'EUR')]
+  const dueLines = (showConv && E.due_mode!=='both') ? [money(convertedTotal(E),'EUR')]
     : ['EUR','GBP'].filter(cur=>T[cur].tot).map(cur=>money(T[cur].tot,cur));
   if(!dueLines.length) dueLines.push(money(0,'EUR'));
   ensure(rows.length*7 + dueLines.length*7 + 16);
@@ -706,7 +716,7 @@ function buildPDF(){
   doc.setFillColor(ACC[0],ACC[1],ACC[2]); doc.roundedRect(bx, y, bw, dh, 1.5, 1.5, 'F');
   doc.setTextColor(255,255,255); font('bold',9); doc.text(P.due, bx+4, y+7.4);
   font('bold',13);
-  dueLines.forEach((d,k)=> doc.text(d, W-M-4, y+7.4 + k*7, {align:'right'}));
+  dueLines.forEach((d,k)=> doc.text((k?'+ ':'')+d, W-M-4, y+7.4 + k*7, {align:'right'}));
   y += dh + 6;
 
   if(showConv){
@@ -777,7 +787,7 @@ function defaultTemplate(lang){
 function buildEmail(){
   const c = clientOf(E)||{}; const lang = c.language==='pt'?'pt':'en';
   let body = (c.email_template&&c.email_template.trim()) ? c.email_template : defaultTemplate(lang);
-  const total = E.convert_total&&S.fx ? EUR(convertedTotal(E)) : totalLabel(E);
+  const total = E.convert_total&&S.fx&&E.due_mode!=='both' ? EUR(convertedTotal(E)) : totalLabel(E);
   body = body.replaceAll('{numero}',E.number).replaceAll('{total}',total)
     .replaceAll('{vencimento}',dmy(E.due_date)).replaceAll('{empresa}',S.settings.business_name||'')
     .replaceAll('{cliente}',c.company||'');
