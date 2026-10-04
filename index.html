@@ -122,11 +122,12 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
     <button class="btn-g" id="lg-btn-up" onclick="doSignup()"></button>
   </div>
   <p class="hint" id="lg-hint"></p>
+  <p style="margin-top:14px"><a href="#" id="lg-forgot" onclick="forgotPass();return false" style="color:var(--acc);font-size:14px"></a></p>
 </div>
 
 <!-- APP -->
 <div id="app" class="hidden">
-  <div id="topbar"><h1 id="tb-title"></h1>
+  <div id="topbar"><div style="display:flex;align-items:center;gap:8px"><h1 id="tb-title"></h1><span id="net-badge" class="hidden" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(245,185,66,.18);color:var(--amber)"></span></div>
     <button class="btn-g" id="btn-logout" style="padding:7px 12px;font-size:13px" onclick="logout()"></button></div>
   <main>
     <div id="v-inv"></div>
@@ -194,7 +195,7 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   setTitle:'Os teus dados (aparecem em todos os PDFs)',setName:'Nome / Empresa',
   setAddr:'Morada (podes usar várias linhas)',setNif:'NIF (opcional)',setIban:'IBAN / dados de pagamento',
   setExtra:'Linha extra no rodapé (opcional)',setVat:'Taxa de IVA por defeito %',savedSet:'Definições guardadas ✓',
-  installHint:'Instalar no iPhone: abre este site no Safari → botão Partilhar → "Adicionar ao ecrã principal". Fica como uma app.',
+  installHint:'Instalar no iPhone: abre este site no Safari → Partilhar → "Adicionar ao ecrã principal". No PC (Chrome ou Edge): ícone "Instalar" na barra de endereço. Depois de instalada, abre e funciona sem internet.',
   uiLang:'Língua da aplicação',
   errFill:'Preenche o email e a password primeiro.',errEmail:'Esse email não parece válido.',
   errPass:'A password precisa de pelo menos 6 caracteres.',
@@ -202,6 +203,7 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   errExists:'Esse email já tem conta — usa "Entrar".',
   errRate:'Muitas tentativas seguidas — espera um minuto e tenta outra vez.',
   created:'Conta criada — entra agora.',
+  forgot:'Esqueci-me da password',forgotNeedEmail:'Escreve o teu email em cima e toca outra vez em "Esqueci-me da password".',forgotSent:'Enviámos-te um email com um link para criares uma password nova. Vê também o spam.',newPassTitle:'Nova password',newPassLbl:'Escreve a nova password (mínimo 6 caracteres)',passChanged:'Password alterada ✓',changePass:'Mudar password',offlineBadge:'Offline',pendingBadge:'{n} por sincronizar',syncDone:'Sincronizado ✓',needOnline:'Precisas de internet para isto.',syncErr:'Erro a sincronizar: ',pendingLogout:'Tens alterações que ainda não foram enviadas. Se saíres agora perdes essas alterações. Sair mesmo assim?',offlineSaved:'Guardado no aparelho — envia quando houver rede',
   banksTitle:'Contas bancárias',addBank:'+ Adicionar conta bancária',
   bankLabel:'Nome da conta (só para ti, ex: "Wise EUR", "Banco PT")',
   bankHolder:'Nome do titular (Name)',bankName:'Banco (opcional)',bankIban:'IBAN',
@@ -253,7 +255,7 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   setTitle:'Your details (shown on every PDF)',setName:'Name / Company',
   setAddr:'Address (multiple lines allowed)',setNif:'Tax ID (optional)',setIban:'IBAN / payment details',
   setExtra:'Extra footer line (optional)',setVat:'Default VAT rate %',savedSet:'Settings saved ✓',
-  installHint:'Install on iPhone: open this site in Safari → Share button → "Add to Home Screen". It works like an app.',
+  installHint:'Install on iPhone: open this site in Safari → Share → "Add to Home Screen". On PC (Chrome or Edge): "Install" icon in the address bar. Once installed it opens and works without internet.',
   uiLang:'App language',
   errFill:'Fill in the email and password first.',errEmail:'That email does not look valid.',
   errPass:'The password needs at least 6 characters.',
@@ -261,6 +263,7 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   errExists:'That email already has an account — use "Sign in".',
   errRate:'Too many attempts — wait a minute and try again.',
   created:'Account created — sign in now.',
+  forgot:'Forgot password',forgotNeedEmail:'Type your email above and tap "Forgot password" again.',forgotSent:'We sent you an email with a link to create a new password. Check spam too.',newPassTitle:'New password',newPassLbl:'Type the new password (at least 6 characters)',passChanged:'Password changed ✓',changePass:'Change password',offlineBadge:'Offline',pendingBadge:'{n} to sync',syncDone:'Synced ✓',needOnline:'You need internet for this.',syncErr:'Sync error: ',pendingLogout:'You have changes that were not sent yet. If you sign out now they will be lost. Sign out anyway?',offlineSaved:'Saved on this device — will upload when online',
   banksTitle:'Bank accounts',addBank:'+ Add bank account',
   bankLabel:'Account name (just for you, e.g. "Wise EUR", "PT bank")',
   bankHolder:'Account holder (Name)',bankName:'Bank (optional)',bankIban:'IBAN',
@@ -285,7 +288,7 @@ function applyLang(){
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
   set('lg-tag',t('tag')); set('lg-l-email',t('email')); set('lg-l-pass',t('pass'));
   set('lg-btn-in',t('login')); set('lg-btn-up',t('signup')); set('lg-hint',t('hintLogin'));
-  set('btn-logout',t('logout'));
+  set('btn-logout',t('logout')); set('lg-forgot',t('forgot'));
   set('tab-lbl-inv',t('tInv')); set('tab-lbl-cal',t('tCal')); set('tab-lbl-cli',t('tCli')); set('tab-lbl-set',t('tSet')); set('tab-lbl-sum',t('tSum'));
   document.getElementById('lang-pt').classList.toggle('on',L==='pt');
   document.getElementById('lang-en').classList.toggle('on',L==='en');
@@ -332,40 +335,178 @@ async function doSignup(){
   if(data.session) boot(data.session); else toast(t('created'));
 }
 function lgv(id){ return document.getElementById(id).value.trim(); }
-async function logout(){ await sb.auth.signOut(); location.reload(); }
+async function logout(){
+  if(S.user && getQueue().length && !confirm(t('pendingLogout'))) return;
+  localStorage.removeItem('inv_last_user');
+  try{ await sb.auth.signOut(); }catch(e){}
+  location.reload();
+}
+async function forgotPass(){
+  const email = lgv('lg-email');
+  if(!/^\S+@\S+\.\S+$/.test(email)){ toast(t('forgotNeedEmail')); return; }
+  if(!navigator.onLine){ toast(t('needOnline')); return; }
+  const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+  if(error){ toast(authPT(error.message)); return; }
+  toast(t('forgotSent'));
+}
+function askNewPass(){
+  openSheet(`<h2>${t('newPassTitle')}</h2>
+    <label>${t('newPassLbl')}</label><input id="np-pass" type="password" autocomplete="new-password">
+    <div class="row" style="margin-top:14px"><button class="btn-p" onclick="saveNewPass('np-pass')">${t('save')}</button></div>`);
+}
+async function saveNewPass(inputId){
+  const pass = document.getElementById(inputId).value;
+  if(pass.length < 6){ toast(t('errPass')); return; }
+  if(!navigator.onLine){ toast(t('needOnline')); return; }
+  const {data, error} = await sb.auth.updateUser({password: pass});
+  if(error){ toast(authPT(error.message)); return; }
+  document.getElementById(inputId).value = '';
+  closeSheet(); toast(t('passChanged'));
+  if(!S.user){ const s = await sb.auth.getSession(); if(s.data.session) boot(s.data.session); }
+}
+sb.auth.onAuthStateChange((ev)=>{ if(ev==='PASSWORD_RECOVERY') setTimeout(askNewPass, 300); });
 
-async function boot(session){
-  S.user = session.user;
+async function boot(session, offlineUser){
+  if(S.booted) return; S.booted = true;
+  S.user = session ? session.user : offlineUser;
+  localStorage.setItem('inv_last_user', JSON.stringify({id:S.user.id, email:S.user.email}));
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   const now = new Date(); S.calY=now.getFullYear(); S.calM=now.getMonth();
-  await loadAll(); loadFx(); go('inv');
+  await loadAll(); loadFx(); go('inv'); updateNetBadge(); syncQueue();
 }
 async function loadAll(){
-  const [st,cl,inv,bk] = await Promise.all([
-    sb.from('inv_settings').select('*').maybeSingle(),
-    sb.from('inv_clients').select('*').order('company'),
-    sb.from('inv_invoices').select('*').order('issue_date',{ascending:false}),
-    sb.from('inv_banks').select('*').order('created_at')
-  ]);
-  S.settings = st.data || {business_name:'',address:'',nif:'',iban:'',extra:'',default_vat:23};
+  let res = null;
+  try{
+    res = await Promise.all([
+      sb.from('inv_settings').select('*').maybeSingle(),
+      sb.from('inv_clients').select('*').order('company'),
+      sb.from('inv_invoices').select('*').order('issue_date',{ascending:false}),
+      sb.from('inv_banks').select('*').order('created_at')
+    ]);
+  }catch(e){ res = null; }
+  if(!res || res.some(r=>r.error)){
+    if(loadCache()){ S.offline = true; updateNetBadge(); return; }
+    if(res){ toast('Erro: '+res.find(r=>r.error).error.message); }
+    S.settings = S.settings || {business_name:'',address:'',nif:'',iban:'',extra:'',default_vat:23};
+    return;
+  }
+  S.offline = false;
+  const [st,cl,inv,bk] = res;
+  S.settings = st.data || {user_id:S.user.id,business_name:'',address:'',nif:'',iban:'',extra:'',default_vat:23};
   S.clients = cl.data||[]; S.invoices = inv.data||[]; S.banks = bk.data||[];
+  getQueue().forEach(applyLocal);
+  saveCache();
   if(!S.banks.length && (S.settings.iban||'').trim()){
-    const r = await sb.from('inv_banks').insert({user_id:S.user.id, label:'Principal',
-      holder:S.settings.business_name||'', iban:S.settings.iban}).select();
-    if(r.data) S.banks = r.data;
+    try{ await dbWrite('inv_banks','upsert',{id:newId(), user_id:S.user.id, label:'Principal',
+      holder:S.settings.business_name||'', iban:S.settings.iban}); }catch(e){}
   }
 }
 async function loadFx(){
   try{ const r = await fetch('https://api.frankfurter.dev/v1/latest?base=GBP&symbols=EUR');
-    const j = await r.json(); S.fx = j.rates.EUR; }
+    const j = await r.json(); S.fx = j.rates.EUR; saveCache(); }
   catch(e){
     try{ const r2 = await fetch('https://open.er-api.com/v6/latest/GBP');
-      const j2 = await r2.json(); S.fx = j2.rates.EUR; }catch(e2){ S.fx=null; }
+      const j2 = await r2.json(); S.fx = j2.rates.EUR; saveCache(); }catch(e2){ S.fx = S.fx || null; }
   }
   if(S.view==='inv'||S.view==='sum') render();
 }
-sb.auth.getSession().then(({data})=>{ if(data.session) boot(data.session); });
+function offlineBoot(){
+  try{
+    const last = JSON.parse(localStorage.getItem('inv_last_user')||'null');
+    if(last && localStorage.getItem('inv_cache_'+last.id)){ boot(null, last); return true; }
+  }catch(e){}
+  return false;
+}
+sb.auth.getSession().then(({data, error})=>{
+  if(data && data.session) boot(data.session);
+  else if(error || !navigator.onLine) offlineBoot();
+}).catch(()=>offlineBoot());
+
+// ---------- DADOS: online + offline ----------
+const LIST = {inv_invoices:'invoices', inv_clients:'clients', inv_banks:'banks'};
+const newId = () => (crypto.randomUUID ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{ const r=Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); }));
+const qKey = () => 'inv_queue_'+S.user.id;
+function getQueue(){ try{ return JSON.parse(localStorage.getItem(qKey())||'[]'); }catch(e){ return []; } }
+function setQueue(q){ localStorage.setItem(qKey(), JSON.stringify(q)); updateNetBadge(); }
+function saveCache(){ if(!S.user) return;
+  localStorage.setItem('inv_cache_'+S.user.id, JSON.stringify({settings:S.settings, clients:S.clients,
+    invoices:S.invoices, banks:S.banks, fx:S.fx, at:Date.now()})); }
+function loadCache(){
+  try{ const c = JSON.parse(localStorage.getItem('inv_cache_'+S.user.id)||'null'); if(!c) return false;
+    S.settings = c.settings; S.clients = c.clients||[]; S.invoices = c.invoices||[]; S.banks = c.banks||[];
+    if(!S.fx && c.fx) S.fx = c.fx;
+    return true; }catch(e){ return false; }
+}
+const isNetErr = e => !navigator.onLine || /fetch|network|load failed|timeout/i.test(String((e&&e.message)||e));
+function applyLocal(op){
+  if(op.table==='inv_settings'){ if(op.kind==='upsert') S.settings = op.rec; return; }
+  const arr = S[LIST[op.table]];
+  const i = arr.findIndex(x=>x.id===op.id);
+  if(op.kind==='delete'){
+    if(i>=0) arr.splice(i,1);
+    if(op.table==='inv_clients') S.invoices.forEach(v=>{ if(v.client_id===op.id) v.client_id=null; });
+    if(op.table==='inv_banks') S.invoices.forEach(v=>{ if(v.bank_id===op.id) v.bank_id=null; });
+  } else {
+    const merged = {...(i>=0?arr[i]:{}), ...op.rec};
+    if(i>=0) arr[i] = merged; else arr.push(merged);
+  }
+  if(op.table==='inv_clients') S.clients.sort((a,b)=>(a.company||'').localeCompare(b.company||''));
+  if(op.table==='inv_invoices') S.invoices.sort((a,b)=>(b.issue_date||'').localeCompare(a.issue_date||''));
+}
+async function sendOp(op){
+  const q = sb.from(op.table);
+  const r = op.kind==='delete' ? await q.delete().eq('id',op.id) : await q.upsert(op.rec);
+  if(r.error) throw r.error;
+}
+async function dbWrite(table, kind, rec, id){
+  const op = {table, kind, rec, id: id || (rec && rec.id)};
+  applyLocal(op); saveCache();
+  if(!getQueue().length && navigator.onLine){
+    try{ await sendOp(op); return 'online'; }
+    catch(e){ if(!isNetErr(e)) throw e; }
+  }
+  setQueue([...getQueue(), op]);
+  toast(t('offlineSaved'));
+  return 'offline';
+}
+let syncing = false;
+async function syncQueue(){
+  if(syncing || !S.user || !navigator.onLine || !getQueue().length) return;
+  syncing = true;
+  try{
+    const s = await sb.auth.getSession();
+    if(!s.data.session) return;
+    S.user = s.data.session.user;
+    let q = getQueue();
+    while(q.length){
+      try{ await sendOp(q[0]); }
+      catch(e){ if(!isNetErr(e)) toast(t('syncErr')+(e.message||e)); return; }
+      q = q.slice(1); setQueue(q);
+    }
+    await loadAll(); render(); toast(t('syncDone'));
+  } finally { syncing = false; updateNetBadge(); }
+}
+function updateNetBadge(){
+  const el = document.getElementById('net-badge'); if(!el || !S.user) return;
+  const n = getQueue().length;
+  const parts = [];
+  if(!navigator.onLine || S.offline) parts.push(t('offlineBadge'));
+  if(n) parts.push(t('pendingBadge').replace('{n}', n));
+  el.textContent = parts.join(' · ');
+  el.classList.toggle('hidden', !parts.length);
+}
+window.addEventListener('online', async ()=>{
+  updateNetBadge();
+  if(!S.user) return;
+  const s = await sb.auth.getSession();
+  if(s.data.session){ S.user = s.data.session.user; if(S.offline){ await loadAll(); render(); } syncQueue(); }
+});
+window.addEventListener('offline', updateNetBadge);
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 
 // ---------- NAV ----------
 function go(v){ S.view=v;
@@ -610,7 +751,7 @@ async function saveInvoice(){
   E.lines = (E.lines||[]).filter(l=>l.desc||l.price);
   if(E.period_start && E.period_end && E.period_end < E.period_start){
     const x = E.period_start; E.period_start = E.period_end; E.period_end = x; }
-  const rec = { user_id:S.user.id, client_id:E.client_id, number:E.number,
+  const rec = { id:E.id||newId(), user_id:S.user.id, client_id:E.client_id, number:E.number,
     issue_date:E.issue_date||todayISO(),
     pay_terms:E.pay_terms||termsFor(E.number), pay_days:E.pay_terms==='custom'?(Number(E.pay_days)||0):null,
     due_date:dueOf({...E, issue_date:E.issue_date||todayISO(), pay_terms:E.pay_terms||termsFor(E.number)}),
@@ -618,22 +759,28 @@ async function saveInvoice(){
     vat_rate:E.vat_rate, lines:E.lines, notes:E.notes, convert_total:E.convert_total,
     due_mode:E.due_mode==='both'?'both':'converted',
     bank_id:E.bank_id||null, paid_at:E.status==='paid'?(E.paid_at||todayISO()):null };
-  let res;
-  if(E.id) res = await sb.from('inv_invoices').update(rec).eq('id',E.id).select().single();
-  else res = await sb.from('inv_invoices').insert(rec).select().single();
-  if(res.error){ toast('Erro: '+res.error.message); return; }
-  E = res.data;
-  await loadAll(); closeSheet(); render(); toast(t('savedInv'));
+  const old = S.invoices.find(i=>i.id===rec.id);
+  if(old && old.created_at) rec.created_at = old.created_at;
+  let mode;
+  try{ mode = await dbWrite('inv_invoices','upsert',rec); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+  E = rec; closeSheet(); render(); if(mode==='online') toast(t('savedInv'));
 }
 async function setPaid(p){
   E.status = p?'paid':'unpaid'; E.paid_at = p?todayISO():null;
-  if(E.id){ await sb.from('inv_invoices').update({status:E.status,paid_at:E.paid_at}).eq('id',E.id);
-    await loadAll(); closeSheet(); render(); toast(p?t('markedPaid'):t('markedUnpaid')); }
+  if(E.id){
+    const cur = S.invoices.find(i=>i.id===E.id) || E;
+    let mode;
+    try{ mode = await dbWrite('inv_invoices','upsert',{...cur, status:E.status, paid_at:E.paid_at}); }
+    catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+    closeSheet(); render(); if(mode==='online') toast(p?t('markedPaid'):t('markedUnpaid')); }
 }
 async function delInvoice(){
   if(!confirm(t('confirmDelInv'))) return;
-  await sb.from('inv_invoices').delete().eq('id',E.id);
-  await loadAll(); closeSheet(); render(); toast(t('deletedInv'));
+  let mode;
+  try{ mode = await dbWrite('inv_invoices','delete',null,E.id); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+  closeSheet(); render(); if(mode==='online') toast(t('deletedInv'));
 }
 
 // ---------- PDF ----------
@@ -1085,17 +1232,18 @@ function editClient(id){
 }
 async function saveClient(){
   if(!C.company.trim()){ toast(t('needCompany')); return; }
-  const rec = {user_id:S.user.id, company:C.company, contact_name:C.contact_name,
+  const rec = {id:C.id||newId(), user_id:S.user.id, company:C.company, contact_name:C.contact_name,
     emails:C.emails, language:C.language, email_template:C.email_template, address:C.address, nif:C.nif};
-  let res = C.id ? await sb.from('inv_clients').update(rec).eq('id',C.id)
-                 : await sb.from('inv_clients').insert(rec);
-  if(res.error){ toast('Erro: '+res.error.message); return; }
-  await loadAll(); closeSheet(); render(); toast(t('savedCli'));
+  let mode;
+  try{ mode = await dbWrite('inv_clients','upsert',rec); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+  closeSheet(); render(); if(mode==='online') toast(t('savedCli'));
 }
 async function delClient(){
   if(!confirm(t('confirmDelCli'))) return;
-  await sb.from('inv_clients').delete().eq('id',C.id);
-  await loadAll(); closeSheet(); render();
+  try{ await dbWrite('inv_clients','delete',null,C.id); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); }
+  closeSheet(); render();
 }
 
 // ---------- DEFINIÇÕES ----------
@@ -1126,6 +1274,11 @@ function rSettings(){
       <span style="color:var(--tx2)">›</span></div>`).join('')}
     <button class="btn-g" style="margin-top:12px" onclick="editBank(null)">${t('addBank')}</button>
   </div>
+  <div class="card">
+    <h3 style="margin-bottom:4px">${t('changePass')}</h3>
+    <label>${t('newPassLbl')}</label><input id="st-newpass" type="password" autocomplete="new-password">
+    <div class="row" style="margin-top:14px"><button class="btn-g" onclick="saveNewPass('st-newpass')">${t('changePass')}</button></div>
+  </div>
   <p class="hint">${t('installHint')}</p>`;
 }
 async function saveSettings(){
@@ -1133,9 +1286,10 @@ async function saveSettings(){
   const rec = {user_id:S.user.id, business_name:g('st-name'), address:g('st-addr'),
     nif:g('st-nif'), iban:S.settings.iban||'', extra:g('st-extra'), default_vat:Number(g('st-vat'))||0,
     updated_at:new Date().toISOString()};
-  const res = await sb.from('inv_settings').upsert(rec);
-  if(res.error){ toast('Erro: '+res.error.message); return; }
-  S.settings = rec; toast(t('savedSet'));
+  let mode;
+  try{ mode = await dbWrite('inv_settings','upsert',rec,S.user.id); }
+  catch(e){ toast('Erro: '+(e.message||e)); return; }
+  if(mode==='online') toast(t('savedSet'));
 }
 
 // ---------- CONTAS BANCÁRIAS ----------
@@ -1158,17 +1312,18 @@ function editBank(id){
 }
 async function saveBank(){
   if(!B.label.trim()){ toast(t('needBankLabel')); return; }
-  const rec = {user_id:S.user.id, label:B.label, holder:B.holder, bank_name:B.bank_name,
+  const rec = {id:B.id||newId(), user_id:S.user.id, label:B.label, holder:B.holder, bank_name:B.bank_name,
     iban:(B.iban||'').replace(/\s+/g,' ').trim(), swift:(B.swift||'').trim(), extra:B.extra};
-  let res = B.id ? await sb.from('inv_banks').update(rec).eq('id',B.id)
-                 : await sb.from('inv_banks').insert(rec);
-  if(res.error){ toast('Erro: '+res.error.message); return; }
-  await loadAll(); closeSheet(); render(); toast(t('savedBank'));
+  let mode;
+  try{ mode = await dbWrite('inv_banks','upsert',rec); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+  closeSheet(); render(); if(mode==='online') toast(t('savedBank'));
 }
 async function delBank(){
   if(!confirm(t('confirmDelBank'))) return;
-  await sb.from('inv_banks').delete().eq('id',B.id);
-  await loadAll(); closeSheet(); render();
+  try{ await dbWrite('inv_banks','delete',null,B.id); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); }
+  closeSheet(); render();
 }
 
 // ---------- SHEET ----------
