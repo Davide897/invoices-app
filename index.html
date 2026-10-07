@@ -98,6 +98,16 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
 .sheet>div{background:var(--bg2);border-radius:18px 18px 0 0;width:100%;max-width:860px;max-height:88vh;
   overflow-y:auto;padding:18px 18px calc(24px + env(safe-area-inset-bottom))}
 @media(min-width:700px){.sheet{align-items:center}.sheet>div{border-radius:18px;max-height:85vh}}
+.thumb{width:52px;height:52px;border-radius:9px;object-fit:cover;background:var(--bg2);border:1px solid var(--line);flex:none}
+.thumb.ph{display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:20px}
+.ph-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ph-grid .ph-it{position:relative}
+.ph-grid img{width:84px;height:84px;border-radius:10px;object-fit:cover;border:1px solid var(--line);cursor:pointer}
+.ph-grid .del-x{position:absolute;top:-8px;right:-8px;background:var(--bg);border:1px solid var(--line);border-radius:50%;
+  width:26px;height:26px;padding:0;font-size:13px}
+.cam-btn{width:100%;padding:16px;font-size:17px;font-weight:700}
+.ph-view{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:60;display:flex;align-items:center;justify-content:center}
+.ph-view img{max-width:96vw;max-height:92vh;border-radius:8px}
 .toast{position:fixed;top:calc(16px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   background:#2a2e38;border:1px solid var(--line);color:var(--tx);padding:11px 20px;border-radius:12px;
   z-index:99;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
@@ -132,6 +142,7 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
   <main>
     <div id="v-inv"></div>
     <div id="v-cal" class="hidden"></div>
+    <div id="v-exp" class="hidden"></div>
     <div id="v-cli" class="hidden"></div>
     <div id="v-sum" class="hidden"></div>
     <div id="v-set" class="hidden"></div>
@@ -140,6 +151,7 @@ main{padding:16px;max-width:860px;margin:0 auto 90px}
   <div id="tabs">
     <button data-v="inv" class="on" onclick="go('inv')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v16l-3-2-2 2-2-2-2 2-2-2-3 2V5a2 2 0 012-2z"/></svg><span id="tab-lbl-inv"></span></button>
     <button data-v="cal" onclick="go('cal')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4m8-4v4"/></svg><span id="tab-lbl-cal"></span></button>
+    <button data-v="exp" onclick="go('exp')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8a2 2 0 012-2h2l1.5-2h7L17 6h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="tab-lbl-exp"></span></button>
     <button data-v="cli" onclick="go('cli')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2m18 0v-2a4 4 0 00-3-3.87M15 7a4 4 0 11-8 0 4 4 0 018 0zm1-3.87a4 4 0 010 7.75"/></svg><span id="tab-lbl-cli"></span></button>
     <button data-v="sum" onclick="go('sum')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-9-9v9z"/><path d="M14 3.3A9 9 0 0120.7 10H14z"/></svg><span id="tab-lbl-sum"></span></button>
     <button data-v="set" onclick="go('set')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.82-.33 1.7 1.7 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.51 1.7 1.7 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.33-1.82 1.7 1.7 0 00-1.51-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.51-1 1.7 1.7 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.82.33h0a1.7 1.7 0 001-1.51V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.51h0a1.7 1.7 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.33 1.82v0a1.7 1.7 0 001.51 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1z"/></svg><span id="tab-lbl-set"></span></button>
@@ -153,8 +165,8 @@ const SB_URL = "https://rauoamwhpttgjjktzatf.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhdW9hbXdocHR0Z2pqa3R6YXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDUwMjAsImV4cCI6MjA5ODU4MTAyMH0.CaKZhROLVzFR2iUWVkbZnuEkYrKYBV6McUWg1fRx7BE";
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
-let S = { user:null, settings:null, clients:[], invoices:[], banks:[], view:'inv',
-          fCompany:'', fStatus:'all', calY:0, calM:0, sumY:new Date().getFullYear(), fx:null };
+let S = { user:null, settings:null, clients:[], invoices:[], banks:[], expenses:[], view:'inv',
+          fCompany:'', fStatus:'all', eClient:'', eStatus:'pending', calY:0, calM:0, sumY:new Date().getFullYear(), fx:null };
 
 // ---------- IDIOMA ----------
 const I18N = {
@@ -217,7 +229,24 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   periodHint:'O calendário pinta todos os dias entre o início e o fim.',
   termsLbl:'Prazo de pagamento',termsWeek:'Terça-feira da semana seguinte (ex: Per Diem)',terms7:'7 dias',terms14:'14 dias',terms30:'30 dias (ex: Wind Farm / horas)',termsCustom:'Outro nº de dias',daysLbl:'Dias',dueIs:'Vence a',termsHint:'Faturas com "PD" no número ficam a pagar na terça-feira da semana seguinte; as outras ficam a 30 dias da data da fatura. Podes mudar sempre.',payShort:'Pag.',legPay:'Dia de pagamento',
   fxWarnApp:'⚠ Câmbio de hoje — no dia do pagamento a taxa pode ser outra. Confirma sempre o câmbio do dia.',
-  dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)'},
+  dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)',
+  tExp:'Despesas',expToBill:'Por cobrar aos clientes:',expN:'despesa',expsN:'despesas',
+  chipPending:'Por faturar',chipBilled:'Faturadas',chipOwn:'Minhas (não cobrar)',
+  emptyExp:'Sem despesas aqui.<br>Toca em <b style="color:var(--acc)">+</b>, tira foto ao recibo e grava o valor.',
+  newExp:'Nova despesa',editExp:'Despesa',takePhoto:'📷 Tirar foto ao recibo',pickPhoto:'🖼 Escolher da galeria / ficheiro',
+  photosLbl:'Fotos (prova)',noPhotos:'Ainda sem fotos.',expDesc:'Descrição *',expDescPh:'ex: Gasóleo, hotel, refeição, peça…',
+  catLbl:'Categoria',amountLbl:'Valor *',currencyLbl:'Moeda',expClientLbl:'Cliente a quem cobrar',noClient:'— nenhum —',
+  billableLbl:'Cobrar ao cliente (entra na próxima fatura)',expNotesLbl:'Notas (só para ti)',
+  bPending:'POR FATURAR',bBilled:'FATURADA',bExpPaid:'PAGA',bOwn:'MINHA',
+  savedExp:'Despesa guardada ✓',delExp:'Apagar despesa',confirmDelExp:'Apagar esta despesa e as fotos? Não dá para desfazer.',
+  deletedExp:'Despesa apagada',needExpDesc:'Escreve uma descrição.',needExpAmount:'Escreve o valor.',
+  billedIn:'Faturada na fatura',openInv:'Abrir fatura',
+  billNow:'🧾 Criar fatura com {n} despesas por faturar',pickClientToBill:'Escolhe um cliente no filtro de cima para criar a fatura com as despesas dele.',
+  addExpBtn:'+ Juntar despesas por faturar deste cliente ({n})',expLinked:'{n} despesas com prova nesta fatura',
+  receiptsPdf:'⬇ Recibos das despesas (PDF)',receiptsTitle:'Recibos de despesas',receiptsFor:'Fatura',
+  photoUploading:'A enviar fotos…',photoPending:'{n} fotos por enviar',photoErr:'Erro a enviar foto: ',
+  photoLoadErr:'Não deu para abrir esta foto (sem internet?)',
+  cats:{fuel:'Combustível',food:'Refeições',hotel:'Alojamento',travel:'Viagem / transporte',parts:'Peças / material',tools:'Ferramentas',parking:'Portagens / estacionamento',other:'Outro'}},
 en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signup:'Create account',
   hintLogin:'First time? Type your email and a password and tap "Create account". Use the same details on your phone and PC to see the same invoices.',
   logout:'Sign out',tInv:'Invoices',tCal:'Calendar',tCli:'Clients',tSet:'Settings',tSum:'Summary',
@@ -277,7 +306,24 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   periodHint:'The calendar marks every day between start and end.',
   termsLbl:'Payment terms',termsWeek:'Tuesday of the following week (e.g. Per Diem)',terms7:'7 days',terms14:'14 days',terms30:'30 days (e.g. Wind Farm / hours)',termsCustom:'Other number of days',daysLbl:'Days',dueIs:'Due on',termsHint:'Invoices with "PD" in the number default to Tuesday of the following week; the others to 30 days from the invoice date. You can always change it.',payShort:'Pay',legPay:'Payment day',
   fxWarnApp:'⚠ Today\'s rate — it may differ on the payment date. Always check the current rate first.',
-  dueModeLbl:'Amount due on the PDF',dueConv:'1 amount: converted total in €',dueBoth:'2 amounts: € + £ (each part in its own currency)'}
+  dueModeLbl:'Amount due on the PDF',dueConv:'1 amount: converted total in €',dueBoth:'2 amounts: € + £ (each part in its own currency)',
+  tExp:'Expenses',expToBill:'To charge clients:',expN:'expense',expsN:'expenses',
+  chipPending:'Not invoiced',chipBilled:'Invoiced',chipOwn:'Mine (not charged)',
+  emptyExp:'No expenses here.<br>Tap <b style="color:var(--acc)">+</b>, take a photo of the receipt and save the amount.',
+  newExp:'New expense',editExp:'Expense',takePhoto:'📷 Take photo of receipt',pickPhoto:'🖼 Choose from gallery / file',
+  photosLbl:'Photos (proof)',noPhotos:'No photos yet.',expDesc:'Description *',expDescPh:'e.g. Diesel, hotel, meal, part…',
+  catLbl:'Category',amountLbl:'Amount *',currencyLbl:'Currency',expClientLbl:'Client to charge',noClient:'— none —',
+  billableLbl:'Charge to the client (goes on the next invoice)',expNotesLbl:'Notes (just for you)',
+  bPending:'NOT INVOICED',bBilled:'INVOICED',bExpPaid:'PAID',bOwn:'MINE',
+  savedExp:'Expense saved ✓',delExp:'Delete expense',confirmDelExp:'Delete this expense and its photos? This cannot be undone.',
+  deletedExp:'Expense deleted',needExpDesc:'Write a description.',needExpAmount:'Write the amount.',
+  billedIn:'Invoiced on invoice',openInv:'Open invoice',
+  billNow:'🧾 Create invoice with {n} uninvoiced expenses',pickClientToBill:'Pick a client in the filter above to create an invoice with their expenses.',
+  addExpBtn:'+ Add this client\'s uninvoiced expenses ({n})',expLinked:'{n} expenses with proof on this invoice',
+  receiptsPdf:'⬇ Expense receipts (PDF)',receiptsTitle:'Expense receipts',receiptsFor:'Invoice',
+  photoUploading:'Uploading photos…',photoPending:'{n} photos to upload',photoErr:'Photo upload error: ',
+  photoLoadErr:'Could not open this photo (no internet?)',
+  cats:{fuel:'Fuel',food:'Meals',hotel:'Accommodation',travel:'Travel / transport',parts:'Parts / materials',tools:'Tools',parking:'Tolls / parking',other:'Other'}}
 };
 let L = localStorage.getItem('inv_lang') || 'pt';
 const t = k => (I18N[L] && I18N[L][k]) ?? I18N.pt[k] ?? k;
@@ -289,7 +335,7 @@ function applyLang(){
   set('lg-tag',t('tag')); set('lg-l-email',t('email')); set('lg-l-pass',t('pass'));
   set('lg-btn-in',t('login')); set('lg-btn-up',t('signup')); set('lg-hint',t('hintLogin'));
   set('btn-logout',t('logout')); set('lg-forgot',t('forgot'));
-  set('tab-lbl-inv',t('tInv')); set('tab-lbl-cal',t('tCal')); set('tab-lbl-cli',t('tCli')); set('tab-lbl-set',t('tSet')); set('tab-lbl-sum',t('tSum'));
+  set('tab-lbl-inv',t('tInv')); set('tab-lbl-cal',t('tCal')); set('tab-lbl-cli',t('tCli')); set('tab-lbl-set',t('tSet')); set('tab-lbl-sum',t('tSum')); set('tab-lbl-exp',t('tExp'));
   document.getElementById('lang-pt').classList.toggle('on',L==='pt');
   document.getElementById('lang-en').classList.toggle('on',L==='en');
   document.documentElement.lang = L;
@@ -387,7 +433,8 @@ async function loadAll(){
       sb.from('inv_settings').select('*').maybeSingle(),
       sb.from('inv_clients').select('*').order('company'),
       sb.from('inv_invoices').select('*').order('issue_date',{ascending:false}),
-      sb.from('inv_banks').select('*').order('created_at')
+      sb.from('inv_banks').select('*').order('created_at'),
+      sb.from('inv_expenses').select('*').order('exp_date',{ascending:false})
     ]);
   }catch(e){ res = null; }
   if(!res || res.some(r=>r.error)){
@@ -397,9 +444,9 @@ async function loadAll(){
     return;
   }
   S.offline = false;
-  const [st,cl,inv,bk] = res;
+  const [st,cl,inv,bk,ex] = res;
   S.settings = st.data || {user_id:S.user.id,business_name:'',address:'',nif:'',iban:'',extra:'',default_vat:23};
-  S.clients = cl.data||[]; S.invoices = inv.data||[]; S.banks = bk.data||[];
+  S.clients = cl.data||[]; S.invoices = inv.data||[]; S.banks = bk.data||[]; S.expenses = ex.data||[];
   getQueue().forEach(applyLocal);
   saveCache();
   if(!S.banks.length && (S.settings.iban||'').trim()){
@@ -429,7 +476,7 @@ sb.auth.getSession().then(({data, error})=>{
 }).catch(()=>offlineBoot());
 
 // ---------- DADOS: online + offline ----------
-const LIST = {inv_invoices:'invoices', inv_clients:'clients', inv_banks:'banks'};
+const LIST = {inv_invoices:'invoices', inv_clients:'clients', inv_banks:'banks', inv_expenses:'expenses'};
 const newId = () => (crypto.randomUUID ? crypto.randomUUID()
   : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{ const r=Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); }));
 const qKey = () => 'inv_queue_'+S.user.id;
@@ -437,10 +484,11 @@ function getQueue(){ try{ return JSON.parse(localStorage.getItem(qKey())||'[]');
 function setQueue(q){ localStorage.setItem(qKey(), JSON.stringify(q)); updateNetBadge(); }
 function saveCache(){ if(!S.user) return;
   localStorage.setItem('inv_cache_'+S.user.id, JSON.stringify({settings:S.settings, clients:S.clients,
-    invoices:S.invoices, banks:S.banks, fx:S.fx, at:Date.now()})); }
+    invoices:S.invoices, banks:S.banks, expenses:S.expenses, fx:S.fx, at:Date.now()})); }
 function loadCache(){
   try{ const c = JSON.parse(localStorage.getItem('inv_cache_'+S.user.id)||'null'); if(!c) return false;
     S.settings = c.settings; S.clients = c.clients||[]; S.invoices = c.invoices||[]; S.banks = c.banks||[];
+    S.expenses = c.expenses||[];
     if(!S.fx && c.fx) S.fx = c.fx;
     return true; }catch(e){ return false; }
 }
@@ -451,7 +499,9 @@ function applyLocal(op){
   const i = arr.findIndex(x=>x.id===op.id);
   if(op.kind==='delete'){
     if(i>=0) arr.splice(i,1);
-    if(op.table==='inv_clients') S.invoices.forEach(v=>{ if(v.client_id===op.id) v.client_id=null; });
+    if(op.table==='inv_clients'){ S.invoices.forEach(v=>{ if(v.client_id===op.id) v.client_id=null; });
+      S.expenses.forEach(v=>{ if(v.client_id===op.id) v.client_id=null; }); }
+    if(op.table==='inv_invoices') S.expenses.forEach(v=>{ if(v.invoice_id===op.id){ v.invoice_id=null; v.status='pending'; } });
     if(op.table==='inv_banks') S.invoices.forEach(v=>{ if(v.bank_id===op.id) v.bank_id=null; });
   } else {
     const merged = {...(i>=0?arr[i]:{}), ...op.rec};
@@ -459,6 +509,7 @@ function applyLocal(op){
   }
   if(op.table==='inv_clients') S.clients.sort((a,b)=>(a.company||'').localeCompare(b.company||''));
   if(op.table==='inv_invoices') S.invoices.sort((a,b)=>(b.issue_date||'').localeCompare(a.issue_date||''));
+  if(op.table==='inv_expenses') S.expenses.sort((a,b)=>(b.exp_date||'').localeCompare(a.exp_date||''));
 }
 async function sendOp(op){
   const q = sb.from(op.table);
@@ -478,7 +529,8 @@ async function dbWrite(table, kind, rec, id){
 }
 let syncing = false;
 async function syncQueue(){
-  if(syncing || !S.user || !navigator.onLine || !getQueue().length) return;
+  if(syncing || !S.user || !navigator.onLine) return;
+  if(!getQueue().length){ uploadPendingPhotos(); return; }
   syncing = true;
   try{
     const s = await sb.auth.getSession();
@@ -491,7 +543,7 @@ async function syncQueue(){
       q = q.slice(1); setQueue(q);
     }
     await loadAll(); render(); toast(t('syncDone'));
-  } finally { syncing = false; updateNetBadge(); }
+  } finally { syncing = false; updateNetBadge(); uploadPendingPhotos(); }
 }
 function updateNetBadge(){
   const el = document.getElementById('net-badge'); if(!el || !S.user) return;
@@ -499,6 +551,7 @@ function updateNetBadge(){
   const parts = [];
   if(!navigator.onLine || S.offline) parts.push(t('offlineBadge'));
   if(n) parts.push(t('pendingBadge').replace('{n}', n));
+  if(S.photoPending) parts.push(t('photoPending').replace('{n}', S.photoPending));
   el.textContent = parts.join(' · ');
   el.classList.toggle('hidden', !parts.length);
 }
@@ -516,13 +569,14 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
 // ---------- NAV ----------
 function go(v){ S.view=v;
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  ['inv','cal','cli','sum','set'].forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
-  document.getElementById('tb-title').textContent = {inv:t('tInv'),cal:t('tCal'),cli:t('tCli'),sum:t('tSum'),set:t('tSet')}[v];
+  ['inv','cal','exp','cli','sum','set'].forEach(x=>document.getElementById('v-'+x).classList.toggle('hidden',x!==v));
+  document.getElementById('tb-title').textContent = {inv:t('tInv'),cal:t('tCal'),exp:t('tExp'),cli:t('tCli'),sum:t('tSum'),set:t('tSet')}[v];
   document.getElementById('fab').classList.toggle('hidden', v==='cal'||v==='set'||v==='sum');
   render();
 }
-function fabClick(){ if(S.view==='cli') editClient(null); else editInvoice(null); }
+function fabClick(){ if(S.view==='cli') editClient(null); else if(S.view==='exp') editExpense(null); else editInvoice(null); }
 function render(){ if(S.view==='inv') rInvoices(); else if(S.view==='cal') rCalendar();
+  else if(S.view==='exp') rExpenses();
   else if(S.view==='cli') rClients(); else if(S.view==='sum') rSummary(); else rSettings(); }
 
 // ---------- CÁLCULO ----------
@@ -639,7 +693,7 @@ function invoiceForm(){
   const cliOpts = S.clients.map(c=>`<option value="${c.id}" ${E.client_id===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
   return `
   <h2 style="margin-bottom:4px">${E.id?t('invoiceWord')+' '+esc(E.number):t('newInvoice')}</h2>
-  <label>${t('clientLbl')}</label><select onchange="E.client_id=this.value">${cliOpts}</select>
+  <label>${t('clientLbl')}</label><select onchange="E.client_id=this.value;drawExpBox()">${cliOpts}</select>
   <div class="row">
     <div><label>${t('numberLbl')}</label><input value="${esc(E.number)}" oninput="E.number=this.value; if(!editInvoice._touched){ E.pay_terms=termsFor(this.value); syncTerms(); }"></div>
     <div><label>${t('dateLbl')}</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value; drawDue()"></div>
@@ -665,6 +719,7 @@ function invoiceForm(){
   <label>${t('linesLbl')}</label>
   <div id="lines"></div>
   <button class="btn-g" style="margin-top:8px" onclick="E.lines.push({desc:'',qty:1,price:'',currency:'EUR'});drawLines()">${t('addLine')}</button>
+  <div id="exp-box"></div>
   <div class="row" style="margin-top:14px">
     <div><label style="margin-top:0">${t('vatLbl')}</label>
       <select onchange="E.vat_rate = this.value===''?null:Number(document.getElementById('vatr').value); drawVat(this.value!=='')" id="vats">
@@ -736,7 +791,7 @@ function drawLines(){
         <option ${l.currency!=='GBP'?'selected':''}>EUR</option>
         <option ${l.currency==='GBP'?'selected':''}>GBP</option></select></td>
       <td><button class="del-x" onclick="E.lines.splice(${i},1);drawLines()">✕</button></td></tr>`).join('')+`</table>`;
-  drawTotals();
+  drawTotals(); drawExpBox();
 }
 function drawTotals(){
   const t = invTotals(E); const box = document.getElementById('totals'); let h='';
@@ -767,7 +822,7 @@ async function saveInvoice(){
   const old = S.invoices.find(i=>i.id===rec.id);
   if(old && old.created_at) rec.created_at = old.created_at;
   let mode;
-  try{ mode = await dbWrite('inv_invoices','upsert',rec); }
+  try{ mode = await dbWrite('inv_invoices','upsert',rec); await linkExpenses(rec); }
   catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
   E = rec; closeSheet(); render(); if(mode==='online') toast(t('savedInv'));
 }
@@ -783,7 +838,11 @@ async function setPaid(p){
 async function delInvoice(){
   if(!confirm(t('confirmDelInv'))) return;
   let mode;
-  try{ mode = await dbWrite('inv_invoices','delete',null,E.id); }
+  const linked = S.expenses.filter(x=>x.invoice_id===E.id).map(x=>({...x, invoice_id:null, status:'pending'}));
+  try{
+    for(const x of linked) await dbWrite('inv_expenses','upsert',x);
+    mode = await dbWrite('inv_invoices','delete',null,E.id);
+  }
   catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
   closeSheet(); render(); if(mode==='online') toast(t('deletedInv'));
 }
@@ -1012,11 +1071,19 @@ async function sharePDF(){
   const m = buildEmail();
   const blob = buildPDF().output('blob');
   const file = new File([blob], pdfName(), {type:'application/pdf'});
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file], title:m.subject, text:m.body}); }
+  const files = [file];
+  const exps = invoiceExpenses(E).filter(x=>(x.photos||[]).length);
+  if(exps.length){
+    try{ const rb = (await buildReceiptsPDF(exps, E)).output('blob');
+      files.push(new File([rb], receiptsName(E), {type:'application/pdf'})); }catch(e){}
+  }
+  if(navigator.canShare && navigator.canShare({files})){
+    try{ await navigator.share({files, title:m.subject, text:m.body}); }
     catch(e){ /* cancelado */ }
   } else {
-    buildPDF().save(pdfName()); openMailto();
+    buildPDF().save(pdfName());
+    if(files[1]) downloadBlob(files[1], files[1].name);
+    openMailto();
     toast(t('pdfFallback'));
   }
 }
@@ -1335,10 +1402,355 @@ async function delBank(){
 function openSheet(html){
   document.getElementById('sheet-body').innerHTML = html;
   document.getElementById('sheet').classList.remove('hidden');
-  if(document.getElementById('lines')) drawLines();
+  if(document.getElementById('lines')){ drawLines(); if(E) prefetchPhotos(invoiceExpenses(E)); }
   if(document.getElementById('due-txt')) drawDue();
 }
 function closeSheet(){ document.getElementById('sheet').classList.add('hidden'); }
+
+// ---------- DESPESAS ----------
+const BUCKET = 'inv-receipts';
+const CAT_KEYS = ['fuel','food','hotel','travel','parts','tools','parking','other'];
+const catName = k => (t('cats')||{})[k] || k || '';
+function expBadge(x){
+  if(!x.billable) return `<span class="badge" style="background:var(--bg2);color:var(--tx2)">${t('bOwn')}</span>`;
+  const inv = x.invoice_id && S.invoices.find(i=>i.id===x.invoice_id);
+  if(inv && inv.status==='paid') return `<span class="badge paid">${t('bExpPaid')}</span>`;
+  if(inv) return `<span class="badge" style="background:rgba(79,140,255,.18);color:var(--acc)">${t('bBilled')} · ${esc(inv.number)}</span>`;
+  return `<span class="badge late">${t('bPending')}</span>`;
+}
+const isPending = x => x.billable && !(x.invoice_id && S.invoices.some(i=>i.id===x.invoice_id));
+function sumByCur(list){ const s={EUR:0,GBP:0}; list.forEach(x=>{ s[x.currency==='GBP'?'GBP':'EUR'] += Number(x.amount)||0; });
+  return [s.EUR?EUR(s.EUR):'', s.GBP?GBP(s.GBP):''].filter(Boolean).join(' + ') || EUR(0); }
+
+function rExpenses(){
+  const el = document.getElementById('v-exp');
+  const pend = S.expenses.filter(isPending);
+  const banner = `<div class="banner">${t('expToBill')} <b>${sumByCur(pend)}</b>
+    <span style="color:var(--tx2)"> · ${pend.length} ${pend.length===1?t('expN'):t('expsN')}</span></div>`;
+  const compOpts = S.clients.map(c=>`<option value="${c.id}" ${S.eClient===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
+  const chips = [['pending',t('chipPending')],['billed',t('chipBilled')],['own',t('chipOwn')],['all',t('chipAll')]];
+  let list = S.expenses.slice();
+  if(S.eClient) list = list.filter(x=>x.client_id===S.eClient);
+  if(S.eStatus==='pending') list = list.filter(isPending);
+  else if(S.eStatus==='billed') list = list.filter(x=>x.billable && !isPending(x));
+  else if(S.eStatus==='own') list = list.filter(x=>!x.billable);
+  let html = banner + `
+    <div class="row"><select onchange="S.eClient=this.value;render()">
+      <option value="">${t('allCompanies')}</option>${compOpts}</select></div>
+    <div class="chips">${chips.map(([k,l])=>`<span class="chip ${S.eStatus===k?'on':''}" onclick="S.eStatus='${k}';render()">${l}</span>`).join('')}</div>`;
+  if(S.eStatus==='pending'){
+    const forCli = S.eClient ? pend.filter(x=>x.client_id===S.eClient) : [];
+    if(forCli.length) html += `<button class="btn-p" style="width:100%;margin-bottom:12px" onclick="billExpenses('${S.eClient}')">${t('billNow').replace('{n}',forCli.length)}</button>`;
+    else if(!S.eClient && pend.length) html += `<p class="hint" style="margin:0 0 10px">${t('pickClientToBill')}</p>`;
+  }
+  if(!list.length) html += `<div class="card" style="text-align:center;color:var(--tx2);padding:34px">${t('emptyExp')}</div>`;
+  list.forEach(x=>{
+    const c = S.clients.find(k=>k.id===x.client_id);
+    const p = (x.photos||[])[0];
+    html += `<div class="card inv-item" style="gap:12px" onclick="editExpense('${x.id}')">
+      ${p?`<img class="thumb" data-path="${esc(p.path)}" alt="">`:`<div class="thumb ph">🧾</div>`}
+      <div style="flex:1;min-width:0"><b>${esc(x.description)}</b>
+        <div style="font-size:13px;color:var(--tx2)">${dmy(x.exp_date)}${x.category?' · '+esc(catName(x.category)):''}${c?' · '+esc(c.company):''}${(x.photos||[]).length>1?' · 📷'+x.photos.length:''}</div></div>
+      <div class="amt"><div style="font-weight:700">${fmt(x.amount, x.currency)}</div>${expBadge(x)}</div></div>`;
+  });
+  el.innerHTML = html;
+  fillThumbs(el);
+}
+
+// --- fotos: guardar no aparelho primeiro, enviar quando houver rede ---
+let _idb = null;
+function idb(){
+  if(_idb) return _idb;
+  _idb = new Promise((res, rej)=>{ const r = indexedDB.open('inv-photos', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('p');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  return _idb;
+}
+async function idbDo(mode, fn){ const db = await idb();
+  return new Promise((res, rej)=>{ const tx = db.transaction('p', mode); const r = fn(tx.objectStore('p'));
+    tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }); }
+const idbPut = (k, v) => idbDo('readwrite', s => s.put(v, k));
+const idbGet = k => idbDo('readonly', s => s.get(k));
+const idbDel = k => idbDo('readwrite', s => s.delete(k));
+const idbKeys = () => idbDo('readonly', s => s.getAllKeys());
+
+async function compressImage(file){
+  if(!/^image\//.test(file.type) || file.type==='image/gif') return file;
+  try{
+    const bmp = await createImageBitmap(file);
+    const max = 1800, k = Math.min(1, max/Math.max(bmp.width, bmp.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(bmp.width*k); cv.height = Math.round(bmp.height*k);
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
+    return blob || file;
+  }catch(e){ return file; }
+}
+const URLS = {}; // path -> url (objectURL local ou signed URL)
+async function photoURL(path){
+  if(URLS[path]) return URLS[path];
+  try{ const b = await idbGet(path); if(b){ URLS[path] = URL.createObjectURL(b); return URLS[path]; } }catch(e){}
+  const {data, error} = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+  if(error || !data) throw (error || new Error('no url'));
+  URLS[path] = data.signedUrl; setTimeout(()=>{ if(URLS[path]===data.signedUrl) delete URLS[path]; }, 3500*1000);
+  return URLS[path];
+}
+async function photoBlob(path){
+  try{ const b = await idbGet(path); if(b) return b; }catch(e){}
+  const {data, error} = await sb.storage.from(BUCKET).download(path);
+  if(error) throw error; return data;
+}
+function fillThumbs(root){
+  root.querySelectorAll('img[data-path]').forEach(async img=>{
+    try{ img.src = await photoURL(img.dataset.path); }catch(e){ img.replaceWith(Object.assign(document.createElement('div'),{className:'thumb ph',textContent:'🧾'})); }
+  });
+}
+function viewPhoto(path){
+  photoURL(path).then(u=>{
+    const d = document.createElement('div'); d.className = 'ph-view'; d.onclick = () => d.remove();
+    d.innerHTML = `<img src="${u}" alt="">`; document.body.appendChild(d);
+  }).catch(()=>toast(t('photoLoadErr')));
+}
+let uploading = false;
+async function uploadPendingPhotos(){
+  if(uploading || !S.user || !navigator.onLine) return;
+  uploading = true;
+  try{
+    let keys = (await idbKeys()).filter(k=>String(k).startsWith(S.user.id+'/'));
+    S.photoPending = keys.length; updateNetBadge();
+    for(const k of keys){
+      const blob = await idbGet(k); if(!blob){ await idbDel(k); continue; }
+      const {error} = await sb.storage.from(BUCKET).upload(k, blob, {upsert:true, contentType: blob.type || 'image/jpeg'});
+      if(error){ if(!isNetErr(error)) toast(t('photoErr')+(error.message||error)); break; }
+      await idbDel(k); S.photoPending = Math.max(0, S.photoPending-1); updateNetBadge();
+    }
+  }catch(e){} finally { uploading = false; updateNetBadge(); }
+}
+
+// --- editor ---
+let X = null; // despesa em edição
+function editExpense(id){
+  X = id ? JSON.parse(JSON.stringify(S.expenses.find(x=>x.id===id)))
+         : {id:null, client_id:S.eClient||(S.clients[0]&&S.clients[0].id)||null, exp_date:todayISO(), description:'',
+            category:'fuel', amount:'', currency:'EUR', billable:true, status:'pending', invoice_id:null, photos:[], notes:''};
+  X._new = !id; X._added = []; X._removed = [];
+  if(!X.id) X.id = newId();
+  const inv = X.invoice_id && S.invoices.find(i=>i.id===X.invoice_id);
+  openSheet(`
+  <h2>${X._new?t('newExp'):t('editExp')}</h2>
+  <label>${t('photosLbl')}</label>
+  <input id="ph-cam" type="file" accept="image/*" capture="environment" class="hidden" onchange="addPhotos(this)">
+  <input id="ph-pick" type="file" accept="image/*,application/pdf" multiple class="hidden" onchange="addPhotos(this)">
+  <button class="btn-p cam-btn" onclick="document.getElementById('ph-cam').click()">${t('takePhoto')}</button>
+  <button class="btn-g" style="width:100%;margin-top:8px" onclick="document.getElementById('ph-pick').click()">${t('pickPhoto')}</button>
+  <div class="ph-grid" id="ph-grid"></div>
+  <label>${t('expDesc')}</label><input value="${esc(X.description)}" placeholder="${t('expDescPh')}" oninput="X.description=this.value">
+  <div class="row">
+    <div style="flex:2"><label>${t('amountLbl')}</label><input type="number" inputmode="decimal" step="0.01" value="${X.amount}" oninput="X.amount=this.value"></div>
+    <div><label>${t('currencyLbl')}</label><select onchange="X.currency=this.value">
+      <option ${X.currency!=='GBP'?'selected':''}>EUR</option><option ${X.currency==='GBP'?'selected':''}>GBP</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>${t('dateLbl')}</label><input type="date" value="${X.exp_date||''}" onchange="X.exp_date=this.value"></div>
+    <div><label>${t('catLbl')}</label><select onchange="X.category=this.value">
+      ${CAT_KEYS.map(k=>`<option value="${k}" ${X.category===k?'selected':''}>${esc(catName(k))}</option>`).join('')}</select></div>
+  </div>
+  <label>${t('expClientLbl')}</label><select onchange="X.client_id=this.value||null">
+    <option value="" ${!X.client_id?'selected':''}>${t('noClient')}</option>
+    ${S.clients.map(c=>`<option value="${c.id}" ${X.client_id===c.id?'selected':''}>${esc(c.company)}</option>`).join('')}</select>
+  <label><input type="checkbox" style="width:auto;margin-right:8px" ${X.billable?'checked':''} onchange="X.billable=this.checked">${t('billableLbl')}</label>
+  <label>${t('expNotesLbl')}</label><textarea rows="2" oninput="X.notes=this.value">${esc(X.notes)}</textarea>
+  ${inv?`<div class="card" style="margin-top:12px">${t('billedIn')} <b>${esc(inv.number)}</b>
+    <button class="btn-g" style="margin-left:8px;padding:6px 10px;font-size:13px" onclick="closeSheet();editInvoice('${inv.id}')">${t('openInv')}</button></div>`:''}
+  <div class="row" style="margin-top:18px">
+    <button class="btn-p" onclick="saveExpense()">${t('save')}</button>
+    <button class="btn-g" onclick="cancelExpense()">${t('closeBtn')}</button></div>
+  ${!X._new?`<div class="row" style="margin-top:10px"><button class="btn-red" onclick="delExpense()">${t('delExp')}</button></div>`:''}`);
+  drawPhotos();
+}
+function drawPhotos(){
+  const el = document.getElementById('ph-grid'); if(!el) return;
+  el.innerHTML = (X.photos||[]).length ? X.photos.map((p,i)=> /\.pdf$/i.test(p.path)
+      ? `<div class="ph-it"><div class="thumb ph" style="width:84px;height:84px" onclick="openPdfProof('${esc(p.path)}')">PDF</div><button class="del-x" onclick="rmPhoto(${i})">✕</button></div>`
+      : `<div class="ph-it"><img data-path="${esc(p.path)}" onclick="viewPhoto('${esc(p.path)}')" alt=""><button class="del-x" onclick="rmPhoto(${i})">✕</button></div>`).join('')
+    : `<p class="hint" style="margin:0">${t('noPhotos')}</p>`;
+  fillThumbs(el);
+}
+async function openPdfProof(path){
+  try{ const b = await photoBlob(path); window.open(URL.createObjectURL(b), '_blank'); }catch(e){ toast(t('photoLoadErr')); }
+}
+async function addPhotos(input){
+  const files = Array.from(input.files||[]); input.value = '';
+  for(const f of files){
+    const isPdf = f.type==='application/pdf';
+    const blob = isPdf ? f : await compressImage(f);
+    const path = `${S.user.id}/${X.id}/${newId()}.${isPdf?'pdf':'jpg'}`;
+    await idbPut(path, blob);
+    X.photos.push({path, at:new Date().toISOString()}); X._added.push(path);
+  }
+  drawPhotos();
+}
+function rmPhoto(i){ const [p] = X.photos.splice(i,1); if(p) X._removed.push(p.path); drawPhotos(); }
+async function cancelExpense(){
+  // fotos tiradas mas não guardadas: apagar do aparelho
+  for(const p of (X._added||[])) { try{ await idbDel(p); }catch(e){} }
+  closeSheet();
+}
+async function saveExpense(){
+  if(!(X.description||'').trim()){ toast(t('needExpDesc')); return; }
+  if(X.amount==='' || isNaN(Number(X.amount))){ toast(t('needExpAmount')); return; }
+  const rec = {id:X.id, user_id:S.user.id, client_id:X.client_id||null, exp_date:X.exp_date||todayISO(),
+    description:X.description.trim(), category:X.category||null, amount:Number(X.amount)||0,
+    currency:X.currency==='GBP'?'GBP':'EUR', billable:!!X.billable,
+    status: X.invoice_id ? 'billed' : 'pending', invoice_id: X.billable ? (X.invoice_id||null) : null,
+    photos:(X.photos||[]).map(p=>({path:p.path, at:p.at})), notes:X.notes||''};
+  if(!rec.invoice_id) rec.status = 'pending';
+  const old = S.expenses.find(x=>x.id===rec.id); if(old && old.created_at) rec.created_at = old.created_at;
+  let mode;
+  try{ mode = await dbWrite('inv_expenses','upsert',rec); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+  const removed = X._removed.filter(p=>!X._added.includes(p));
+  for(const p of X._removed){ try{ await idbDel(p); }catch(e){} }
+  if(removed.length && navigator.onLine) sb.storage.from(BUCKET).remove(removed).catch(()=>{});
+  closeSheet(); render(); if(mode==='online') toast(t('savedExp'));
+  uploadPendingPhotos();
+}
+async function delExpense(){
+  if(!confirm(t('confirmDelExp'))) return;
+  const paths = (X.photos||[]).map(p=>p.path).concat(X._removed||[]);
+  let mode;
+  try{ mode = await dbWrite('inv_expenses','delete',null,X.id); }
+  catch(e){ toast('Erro: '+(e.message||e)); await loadAll(); render(); return; }
+  for(const p of paths){ try{ await idbDel(p); }catch(e){} }
+  if(paths.length && navigator.onLine) sb.storage.from(BUCKET).remove(paths).catch(()=>{});
+  closeSheet(); render(); if(mode==='online') toast(t('deletedExp'));
+}
+
+// --- ligação despesas <-> faturas ---
+function invoiceExpenses(inv){
+  const ids = new Set((inv.lines||[]).map(l=>l.exp_id).filter(Boolean));
+  return S.expenses.filter(x=>ids.has(x.id) || (inv.id && x.invoice_id===inv.id));
+}
+function expLine(x){
+  return {desc:`${x.description}${x.category?' ('+catName(x.category)+')':''} · ${dmy(x.exp_date)}`,
+          qty:1, price:Number(x.amount)||0, currency:x.currency==='GBP'?'GBP':'EUR', exp_id:x.id};
+}
+function pendingFor(clientId){
+  const used = new Set((E && E.lines||[]).map(l=>l.exp_id).filter(Boolean));
+  return S.expenses.filter(x=>isPending(x) && x.client_id===clientId && !used.has(x.id))
+    .sort((a,b)=>(a.exp_date||'').localeCompare(b.exp_date||''));
+}
+function drawExpBox(){
+  const el = document.getElementById('exp-box'); if(!el || !E) return;
+  const pend = pendingFor(E.client_id);
+  const linked = invoiceExpenses(E).filter(x=>(E.lines||[]).some(l=>l.exp_id===x.id));
+  const withPh = linked.filter(x=>(x.photos||[]).length);
+  el.innerHTML = (pend.length ? `<button class="btn-g" style="margin-top:8px;border-color:var(--amber);color:var(--amber)" onclick="addPendingExpenses()">${t('addExpBtn').replace('{n}',pend.length)}</button>` : '')
+    + (linked.length ? `<p class="hint" style="margin:8px 0 0">📎 ${t('expLinked').replace('{n}',linked.length)}</p>` : '')
+    + (withPh.length && E.id ? `<button class="btn-g" style="margin-top:8px" onclick="downloadReceipts()">${t('receiptsPdf')}</button>` : '');
+}
+function addPendingExpenses(){
+  const pend = pendingFor(E.client_id);
+  E.lines = (E.lines||[]).filter(l=>l.desc||l.price);
+  pend.forEach(x=>E.lines.push(expLine(x)));
+  drawLines(); prefetchPhotos(pend);
+}
+function billExpenses(clientId){
+  editInvoice(null);
+  if(!E) return;
+  E.client_id = clientId;
+  openSheet(invoiceForm());
+  addPendingExpenses();
+}
+async function linkExpenses(inv){
+  const ids = new Set((inv.lines||[]).map(l=>l.exp_id).filter(Boolean));
+  for(const x of S.expenses.slice()){
+    const want = ids.has(x.id);
+    if(want && x.invoice_id!==inv.id) await dbWrite('inv_expenses','upsert',{...x, invoice_id:inv.id, status:'billed', billable:true});
+    else if(!want && x.invoice_id===inv.id) await dbWrite('inv_expenses','upsert',{...x, invoice_id:null, status:'pending'});
+  }
+}
+
+// --- PDF de recibos (prova para o cliente) ---
+const DATAURLS = {};
+const blobToDataURL = b => new Promise((res, rej)=>{ const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+const imgSize = src => new Promise((res, rej)=>{ const i = new Image(); i.onload = () => res({w:i.naturalWidth, h:i.naturalHeight}); i.onerror = rej; i.src = src; });
+async function photoDataURL(path){
+  if(DATAURLS[path]) return DATAURLS[path];
+  const b = await photoBlob(path);
+  const src = await blobToDataURL(b); const sz = await imgSize(src);
+  return (DATAURLS[path] = {src, ...sz});
+}
+function prefetchPhotos(exps){
+  (exps||[]).forEach(x=>(x.photos||[]).forEach(p=>{ if(!/\.pdf$/i.test(p.path)) photoDataURL(p.path).catch(()=>{}); }));
+}
+const receiptsName = inv => `Receipts_${(inv.number||'').replace(/[^\w-]/g,'_')}.pdf`;
+async function buildReceiptsPDF(exps, inv){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const c = (inv && clientOf(inv)) || {};
+  const P = c.language==='pt'
+    ? {title:'RECIBOS DE DESPESAS', inv:'Fatura', date:'Data', desc:'Descrição', amt:'Valor', page:'Página', total:'Total', pdfNote:'(comprovativo em PDF, enviado à parte)'}
+    : {title:'EXPENSE RECEIPTS', inv:'Invoice', date:'Date', desc:'Description', amt:'Amount', page:'Page', total:'Total', pdfNote:'(PDF receipt, sent separately)'};
+  const W = 210, H = 297, M = 16;
+  doc.setFillColor(47,92,190); doc.rect(0,0,W,4,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(30,33,40);
+  doc.text(P.title, M, 20);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(115,120,130);
+  doc.text([inv && inv.number ? `${P.inv} ${inv.number}` : '', c.company||'', S.settings.business_name||''].filter(Boolean).join('  ·  '), M, 27);
+  let y = 38;
+  doc.setFillColor(30,33,40); doc.rect(M, y, W-2*M, 8, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text('#', M+3, y+5.3); doc.text(P.date, M+12, y+5.3); doc.text(P.desc, M+38, y+5.3); doc.text(P.amt, W-M-3, y+5.3, {align:'right'});
+  y += 8;
+  const loc = c.language==='pt' ? 'pt-PT' : 'en-GB';
+  const money = (v,cur) => new Intl.NumberFormat(loc,{style:'currency',currency:cur}).format(v||0);
+  const tot = {EUR:0, GBP:0};
+  exps.forEach((x,i)=>{
+    const cur = x.currency==='GBP'?'GBP':'EUR'; tot[cur] += Number(x.amount)||0;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(30,33,40);
+    const dl = doc.splitTextToSize(x.description||'', 110);
+    const rh = Math.max(7, dl.length*4.6+3);
+    if(y+rh > H-20){ doc.addPage(); y = 20; }
+    doc.text(String(i+1), M+3, y+5); doc.text(dmy(x.exp_date), M+12, y+5);
+    dl.forEach((l,k)=>doc.text(l, M+38, y+5+k*4.6));
+    doc.setFont('helvetica','bold'); doc.text(money(x.amount,cur), W-M-3, y+5, {align:'right'});
+    y += rh; doc.setDrawColor(226,228,234); doc.line(M, y, W-M, y);
+  });
+  y += 7; doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text(`${P.total}: ${['EUR','GBP'].filter(k=>tot[k]).map(k=>money(tot[k],k)).join(' + ') || money(0,'EUR')}`, W-M-3, y, {align:'right'});
+  for(let i=0;i<exps.length;i++){
+    const x = exps[i];
+    for(const p of (x.photos||[])){
+      doc.addPage();
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(30,33,40);
+      doc.text(`#${i+1}  ${dmy(x.exp_date)}  ·  ${money(x.amount, x.currency==='GBP'?'GBP':'EUR')}`, M, 14);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(115,120,130);
+      doc.text(doc.splitTextToSize(x.description||'', W-2*M)[0]||'', M, 20);
+      if(/\.pdf$/i.test(p.path)){ doc.text(P.pdfNote, M, 30); continue; }
+      try{
+        const im = await photoDataURL(p.path);
+        const bw = W-2*M, bh = H-26-14;
+        const k = Math.min(bw/im.w, bh/im.h);
+        const w = im.w*k, h = im.h*k;
+        doc.addImage(im.src, /^data:image\/png/.test(im.src) ? 'PNG' : 'JPEG', M+(bw-w)/2, 26, w, h);
+      }catch(e){ doc.text('[foto indisponível / photo unavailable]', M, 30); }
+    }
+  }
+  const n = doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){ doc.setPage(i); doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(115,120,130);
+    doc.text(`${P.page} ${i}/${n}`, W-M, H-8, {align:'right'}); }
+  return doc;
+}
+function downloadBlob(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+async function downloadReceipts(){
+  const exps = invoiceExpenses(E).filter(x=>(x.photos||[]).length);
+  try{ (await buildReceiptsPDF(exps, E)).save(receiptsName(E)); toast(t('pdfDone')); }
+  catch(e){ toast(t('photoLoadErr')); }
+}
 applyLang();
 </script>
 </body>
