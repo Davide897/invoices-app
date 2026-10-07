@@ -230,8 +230,13 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   termsLbl:'Prazo de pagamento',termsWeek:'Terça-feira da semana seguinte (ex: Per Diem)',terms7:'7 dias',terms14:'14 dias',terms30:'30 dias (ex: Wind Farm / horas)',termsCustom:'Outro nº de dias',daysLbl:'Dias',dueIs:'Vence a',termsHint:'Faturas com "PD" no número ficam a pagar na terça-feira da semana seguinte; as outras ficam a 30 dias da data da fatura. Podes mudar sempre.',payShort:'Pag.',legPay:'Dia de pagamento',
   fxWarnApp:'⚠ Câmbio de hoje — no dia do pagamento a taxa pode ser outra. Confirma sempre o câmbio do dia.',
   dueModeLbl:'Valor a pagar no PDF',dueConv:'Só 1 valor: total convertido em €',dueBoth:'Os 2 valores: € + £ (cada parte na sua moeda)',
-  tExp:'Despesas',expToBill:'Por cobrar aos clientes:',expN:'despesa',expsN:'despesas',
-  chipPending:'Por faturar',chipBilled:'Faturadas',chipOwn:'Minhas (não cobrar)',
+  tExp:'Despesas',expToBill:'Por receber dos clientes:',expN:'despesa',expsN:'despesas',
+  chipPending:'Por receber',chipBilled:'Pagas',chipOwn:'Minhas (não cobrar)',
+  bOwed:'POR RECEBER',bOnInv:'NA FATURA',markExpPaid:'Marcar PAGA ✓',markExpUnpaid:'Marcar NÃO paga',
+  expPaidOn:'Paga a',paidByInv:'Fica paga quando marcares a fatura como paga.',
+  setExpTitle:'Despesas',setExpInv:'Juntar despesas às faturas',
+  setExpInvHint:'Desligado: as despesas não entram nas faturas — ficas só a saber quem ainda te deve e marcas "paga" quando te pagarem. Ligado: aparece também o botão para pôr as despesas numa fatura.',
+  savedExpPaid:'Despesa marcada como PAGA ✓',savedExpUnpaid:'Despesa marcada como não paga',
   emptyExp:'Sem despesas aqui.<br>Toca em <b style="color:var(--acc)">+</b>, tira foto ao recibo e grava o valor.',
   newExp:'Nova despesa',editExp:'Despesa',takePhoto:'📷 Tirar foto ao recibo',pickPhoto:'🖼 Escolher da galeria / ficheiro',
   photosLbl:'Fotos (prova)',noPhotos:'Ainda sem fotos.',expDesc:'Descrição *',expDescPh:'ex: Gasóleo, hotel, refeição, peça…',
@@ -307,8 +312,13 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   termsLbl:'Payment terms',termsWeek:'Tuesday of the following week (e.g. Per Diem)',terms7:'7 days',terms14:'14 days',terms30:'30 days (e.g. Wind Farm / hours)',termsCustom:'Other number of days',daysLbl:'Days',dueIs:'Due on',termsHint:'Invoices with "PD" in the number default to Tuesday of the following week; the others to 30 days from the invoice date. You can always change it.',payShort:'Pay',legPay:'Payment day',
   fxWarnApp:'⚠ Today\'s rate — it may differ on the payment date. Always check the current rate first.',
   dueModeLbl:'Amount due on the PDF',dueConv:'1 amount: converted total in €',dueBoth:'2 amounts: € + £ (each part in its own currency)',
-  tExp:'Expenses',expToBill:'To charge clients:',expN:'expense',expsN:'expenses',
-  chipPending:'Not invoiced',chipBilled:'Invoiced',chipOwn:'Mine (not charged)',
+  tExp:'Expenses',expToBill:'Owed by clients:',expN:'expense',expsN:'expenses',
+  chipPending:'Owed',chipBilled:'Paid',chipOwn:'Mine (not charged)',
+  bOwed:'OWED',bOnInv:'ON INVOICE',markExpPaid:'Mark as PAID ✓',markExpUnpaid:'Mark as UNPAID',
+  expPaidOn:'Paid on',paidByInv:'It becomes paid when you mark the invoice as paid.',
+  setExpTitle:'Expenses',setExpInv:'Add expenses to invoices',
+  setExpInvHint:'Off: expenses never go on invoices — you just track who still owes you and mark "paid" when they pay. On: you also get the button to put expenses on an invoice.',
+  savedExpPaid:'Expense marked as PAID ✓',savedExpUnpaid:'Expense marked as unpaid',
   emptyExp:'No expenses here.<br>Tap <b style="color:var(--acc)">+</b>, take a photo of the receipt and save the amount.',
   newExp:'New expense',editExp:'Expense',takePhoto:'📷 Take photo of receipt',pickPhoto:'🖼 Choose from gallery / file',
   photosLbl:'Photos (proof)',noPhotos:'No photos yet.',expDesc:'Description *',expDescPh:'e.g. Diesel, hotel, meal, part…',
@@ -1347,6 +1357,12 @@ function rSettings(){
     <button class="btn-g" style="margin-top:12px" onclick="editBank(null)">${t('addBank')}</button>
   </div>
   <div class="card">
+    <h3 style="margin-bottom:4px">${t('setExpTitle')}</h3>
+    <label><input type="checkbox" style="width:auto;margin-right:8px" ${expInvOn()?'checked':''}
+      onchange="saveExpInv(this.checked)">${t('setExpInv')}</label>
+    <p class="hint">${t('setExpInvHint')}</p>
+  </div>
+  <div class="card">
     <h3 style="margin-bottom:4px">${t('changePass')}</h3>
     <label>${t('newPassLbl')}</label><input id="st-newpass" type="password" autocomplete="new-password">
     <div class="row" style="margin-top:14px"><button class="btn-g" onclick="saveNewPass('st-newpass')">${t('changePass')}</button></div>
@@ -1357,7 +1373,14 @@ async function saveSettings(){
   const g = id=>document.getElementById(id).value;
   const rec = {user_id:S.user.id, business_name:g('st-name'), address:g('st-addr'),
     nif:g('st-nif'), iban:S.settings.iban||'', extra:g('st-extra'), default_vat:Number(g('st-vat'))||0,
-    updated_at:new Date().toISOString()};
+    exp_invoice:expInvOn(), updated_at:new Date().toISOString()};
+  let mode;
+  try{ mode = await dbWrite('inv_settings','upsert',rec,S.user.id); }
+  catch(e){ toast('Erro: '+(e.message||e)); return; }
+  if(mode==='online') toast(t('savedSet'));
+}
+async function saveExpInv(on){
+  const rec = {...S.settings, user_id:S.user.id, exp_invoice:!!on, updated_at:new Date().toISOString()};
   let mode;
   try{ mode = await dbWrite('inv_settings','upsert',rec,S.user.id); }
   catch(e){ toast('Erro: '+(e.message||e)); return; }
@@ -1411,34 +1434,40 @@ function closeSheet(){ document.getElementById('sheet').classList.add('hidden');
 const BUCKET = 'inv-receipts';
 const CAT_KEYS = ['fuel','food','hotel','travel','parts','tools','parking','other'];
 const catName = k => (t('cats')||{})[k] || k || '';
+const expInvOn = () => !S.settings || S.settings.exp_invoice !== false;
+const invOf = x => x.invoice_id && S.invoices.find(i=>i.id===x.invoice_id);
+function isExpPaid(x){ const inv = invOf(x); return inv ? inv.status==='paid' : x.status==='paid'; }
+const isOwed = x => x.billable && !isExpPaid(x);
+// por faturar: cobrável, ainda não paga e fora de qualquer fatura
+const isPending = x => x.billable && !invOf(x) && x.status!=='paid';
 function expBadge(x){
   if(!x.billable) return `<span class="badge" style="background:var(--bg2);color:var(--tx2)">${t('bOwn')}</span>`;
-  const inv = x.invoice_id && S.invoices.find(i=>i.id===x.invoice_id);
-  if(inv && inv.status==='paid') return `<span class="badge paid">${t('bExpPaid')}</span>`;
-  if(inv) return `<span class="badge" style="background:rgba(79,140,255,.18);color:var(--acc)">${t('bBilled')} · ${esc(inv.number)}</span>`;
-  return `<span class="badge late">${t('bPending')}</span>`;
+  if(isExpPaid(x)) return `<span class="badge paid">${t('bExpPaid')}</span>`;
+  const inv = invOf(x);
+  if(inv) return `<span class="badge" style="background:rgba(79,140,255,.18);color:var(--acc)">${t('bOnInv')} · ${esc(inv.number)}</span>`;
+  return `<span class="badge late">${t('bOwed')}</span>`;
 }
-const isPending = x => x.billable && !(x.invoice_id && S.invoices.some(i=>i.id===x.invoice_id));
 function sumByCur(list){ const s={EUR:0,GBP:0}; list.forEach(x=>{ s[x.currency==='GBP'?'GBP':'EUR'] += Number(x.amount)||0; });
   return [s.EUR?EUR(s.EUR):'', s.GBP?GBP(s.GBP):''].filter(Boolean).join(' + ') || EUR(0); }
 
 function rExpenses(){
   const el = document.getElementById('v-exp');
+  const owed = S.expenses.filter(isOwed);
   const pend = S.expenses.filter(isPending);
-  const banner = `<div class="banner">${t('expToBill')} <b>${sumByCur(pend)}</b>
-    <span style="color:var(--tx2)"> · ${pend.length} ${pend.length===1?t('expN'):t('expsN')}</span></div>`;
+  const banner = `<div class="banner">${t('expToBill')} <b>${sumByCur(owed)}</b>
+    <span style="color:var(--tx2)"> · ${owed.length} ${owed.length===1?t('expN'):t('expsN')}</span></div>`;
   const compOpts = S.clients.map(c=>`<option value="${c.id}" ${S.eClient===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
   const chips = [['pending',t('chipPending')],['billed',t('chipBilled')],['own',t('chipOwn')],['all',t('chipAll')]];
   let list = S.expenses.slice();
   if(S.eClient) list = list.filter(x=>x.client_id===S.eClient);
-  if(S.eStatus==='pending') list = list.filter(isPending);
-  else if(S.eStatus==='billed') list = list.filter(x=>x.billable && !isPending(x));
+  if(S.eStatus==='pending') list = list.filter(isOwed);
+  else if(S.eStatus==='billed') list = list.filter(x=>x.billable && isExpPaid(x));
   else if(S.eStatus==='own') list = list.filter(x=>!x.billable);
   let html = banner + `
     <div class="row"><select onchange="S.eClient=this.value;render()">
       <option value="">${t('allCompanies')}</option>${compOpts}</select></div>
     <div class="chips">${chips.map(([k,l])=>`<span class="chip ${S.eStatus===k?'on':''}" onclick="S.eStatus='${k}';render()">${l}</span>`).join('')}</div>`;
-  if(S.eStatus==='pending'){
+  if(S.eStatus==='pending' && expInvOn()){
     const forCli = S.eClient ? pend.filter(x=>x.client_id===S.eClient) : [];
     if(forCli.length) html += `<button class="btn-p" style="width:100%;margin-bottom:12px" onclick="billExpenses('${S.eClient}')">${t('billNow').replace('{n}',forCli.length)}</button>`;
     else if(!S.eClient && pend.length) html += `<p class="hint" style="margin:0 0 10px">${t('pickClientToBill')}</p>`;
@@ -1561,10 +1590,15 @@ function editExpense(id){
   <label><input type="checkbox" style="width:auto;margin-right:8px" ${X.billable?'checked':''} onchange="X.billable=this.checked">${t('billableLbl')}</label>
   <label>${t('expNotesLbl')}</label><textarea rows="2" oninput="X.notes=this.value">${esc(X.notes)}</textarea>
   ${inv?`<div class="card" style="margin-top:12px">${t('billedIn')} <b>${esc(inv.number)}</b>
-    <button class="btn-g" style="margin-left:8px;padding:6px 10px;font-size:13px" onclick="closeSheet();editInvoice('${inv.id}')">${t('openInv')}</button></div>`:''}
+    <button class="btn-g" style="margin-left:8px;padding:6px 10px;font-size:13px" onclick="closeSheet();editInvoice('${inv.id}')">${t('openInv')}</button>
+    ${inv.status!=='paid'?`<div class="hint">${t('paidByInv')}</div>`:''}</div>`:''}
+  ${!inv && X.status==='paid' && X.paid_at ? `<p class="hint" style="color:var(--green)">${t('expPaidOn')} ${dmy(X.paid_at)}</p>` : ''}
   <div class="row" style="margin-top:18px">
     <button class="btn-p" onclick="saveExpense()">${t('save')}</button>
-    <button class="btn-g" onclick="cancelExpense()">${t('closeBtn')}</button></div>
+    ${!X._new && !inv && X.billable ? (X.status==='paid'
+      ? `<button class="btn-g" onclick="setExpPaid(false)">${t('markExpUnpaid')}</button>`
+      : `<button class="btn-green" onclick="setExpPaid(true)">${t('markExpPaid')}</button>`) : ''}</div>
+  <div class="row" style="margin-top:10px"><button class="btn-g" onclick="cancelExpense()">${t('closeBtn')}</button></div>
   ${!X._new?`<div class="row" style="margin-top:10px"><button class="btn-red" onclick="delExpense()">${t('delExp')}</button></div>`:''}`);
   drawPhotos();
 }
@@ -1602,9 +1636,10 @@ async function saveExpense(){
   const rec = {id:X.id, user_id:S.user.id, client_id:X.client_id||null, exp_date:X.exp_date||todayISO(),
     description:X.description.trim(), category:X.category||null, amount:Number(X.amount)||0,
     currency:X.currency==='GBP'?'GBP':'EUR', billable:!!X.billable,
-    status: X.invoice_id ? 'billed' : 'pending', invoice_id: X.billable ? (X.invoice_id||null) : null,
+    invoice_id: X.billable ? (X.invoice_id||null) : null,
     photos:(X.photos||[]).map(p=>({path:p.path, at:p.at})), notes:X.notes||''};
-  if(!rec.invoice_id) rec.status = 'pending';
+  rec.status = rec.invoice_id ? 'billed' : (X.status==='paid' && rec.billable ? 'paid' : 'pending');
+  rec.paid_at = rec.status==='paid' ? (X.paid_at || todayISO()) : null;
   const old = S.expenses.find(x=>x.id===rec.id); if(old && old.created_at) rec.created_at = old.created_at;
   let mode;
   try{ mode = await dbWrite('inv_expenses','upsert',rec); }
@@ -1612,8 +1647,13 @@ async function saveExpense(){
   const removed = X._removed.filter(p=>!X._added.includes(p));
   for(const p of X._removed){ try{ await idbDel(p); }catch(e){} }
   if(removed.length && navigator.onLine) sb.storage.from(BUCKET).remove(removed).catch(()=>{});
-  closeSheet(); render(); if(mode==='online') toast(t('savedExp'));
+  closeSheet(); render(); if(mode==='online') toast(X._paidMsg || t('savedExp'));
   uploadPendingPhotos();
+}
+function setExpPaid(p){
+  X.status = p ? 'paid' : 'pending'; X.paid_at = p ? todayISO() : null;
+  X._paidMsg = p ? t('savedExpPaid') : t('savedExpUnpaid');
+  saveExpense();
 }
 async function delExpense(){
   if(!confirm(t('confirmDelExp'))) return;
@@ -1642,7 +1682,7 @@ function pendingFor(clientId){
 }
 function drawExpBox(){
   const el = document.getElementById('exp-box'); if(!el || !E) return;
-  const pend = pendingFor(E.client_id);
+  const pend = expInvOn() ? pendingFor(E.client_id) : [];
   const linked = invoiceExpenses(E).filter(x=>(E.lines||[]).some(l=>l.exp_id===x.id));
   const withPh = linked.filter(x=>(x.photos||[]).length);
   el.innerHTML = (pend.length ? `<button class="btn-g" style="margin-top:8px;border-color:var(--amber);color:var(--amber)" onclick="addPendingExpenses()">${t('addExpBtn').replace('{n}',pend.length)}</button>` : '')
