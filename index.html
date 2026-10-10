@@ -237,6 +237,7 @@ pt:{tag:'A tua app de faturação',email:'Email',pass:'Password',login:'Entrar',
   setExpTitle:'Despesas',setExpInv:'Juntar despesas às faturas',
   setExpInvHint:'Desligado: as despesas não entram nas faturas — ficas só a saber quem ainda te deve e marcas "paga" quando te pagarem. Ligado: aparece também o botão para pôr as despesas numa fatura.',
   savedExpPaid:'Despesa marcada como PAGA ✓',savedExpUnpaid:'Despesa marcada como não paga',
+  presetPick:'📋 Usar linhas predefinidas…',presetSave:'💾 Guardar estas linhas como predefinidas',presetName:'Nome para estas linhas (ex: "Semana Wind Farm")',presetAuto:'Pôr estas linhas automaticamente em cada fatura nova para {c}?',presetSaved:'Linhas predefinidas guardadas ✓',presetNoLines:'Escreve primeiro as linhas.',presetsTitle:'Linhas predefinidas',presetsHint:'Cria-as numa fatura: escreve as linhas e toca em "Guardar estas linhas como predefinidas". As que estão ligadas a um cliente entram sozinhas em cada fatura nova desse cliente — só mudas o valor.',presetsEmpty:'Ainda não tens linhas predefinidas.',presetRename:'Mudar nome',presetDel:'Apagar',presetConfirmDel:'Apagar estas linhas predefinidas?',presetLinesN:'{n} linhas',presetAutoFor:'Entram sozinhas nas faturas novas de',presetNone:'— nenhum (só à mão) —',presetOverwrite:'Já existe "{n}". Substituir?',
   emptyExp:'Sem despesas aqui.<br>Toca em <b style="color:var(--acc)">+</b>, tira foto ao recibo e grava o valor.',
   newExp:'Nova despesa',editExp:'Despesa',takePhoto:'📷 Tirar foto ao recibo',pickPhoto:'🖼 Escolher da galeria / ficheiro',
   photosLbl:'Fotos (prova)',noPhotos:'Ainda sem fotos.',expDesc:'Descrição *',expDescPh:'ex: Gasóleo, hotel, refeição, peça…',
@@ -319,6 +320,7 @@ en:{tag:'Your invoicing app',email:'Email',pass:'Password',login:'Sign in',signu
   setExpTitle:'Expenses',setExpInv:'Add expenses to invoices',
   setExpInvHint:'Off: expenses never go on invoices — you just track who still owes you and mark "paid" when they pay. On: you also get the button to put expenses on an invoice.',
   savedExpPaid:'Expense marked as PAID ✓',savedExpUnpaid:'Expense marked as unpaid',
+  presetPick:'📋 Use preset lines…',presetSave:'💾 Save these lines as a preset',presetName:'Name for these lines (e.g. "Wind Farm week")',presetAuto:'Add these lines automatically to every new invoice for {c}?',presetSaved:'Preset lines saved ✓',presetNoLines:'Write the lines first.',presetsTitle:'Preset lines',presetsHint:'Create them on an invoice: write the lines and tap "Save these lines as a preset". Presets linked to a client are added automatically to every new invoice for that client — you only change the amount.',presetsEmpty:'No preset lines yet.',presetRename:'Rename',presetDel:'Delete',presetConfirmDel:'Delete these preset lines?',presetLinesN:'{n} lines',presetAutoFor:'Added automatically to new invoices for',presetNone:'— none (manual only) —',presetOverwrite:'"{n}" already exists. Replace it?',
   emptyExp:'No expenses here.<br>Tap <b style="color:var(--acc)">+</b>, take a photo of the receipt and save the amount.',
   newExp:'New expense',editExp:'Expense',takePhoto:'📷 Take photo of receipt',pickPhoto:'🖼 Choose from gallery / file',
   photosLbl:'Photos (proof)',noPhotos:'No photos yet.',expDesc:'Description *',expDescPh:'e.g. Diesel, hotel, meal, part…',
@@ -697,13 +699,14 @@ function editInvoice(id){
              pay_terms:null, pay_days:null,
              lines:[{desc:'',qty:1,price:'',currency:'EUR'}],
              notes:'', convert_total:false, bank_id:(S.banks&&S.banks[0]&&S.banks[0].id)||null };
+  if(!id) applyClientPreset();
   openSheet(invoiceForm());
 }
 function invoiceForm(){
   const cliOpts = S.clients.map(c=>`<option value="${c.id}" ${E.client_id===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
   return `
   <h2 style="margin-bottom:4px">${E.id?t('invoiceWord')+' '+esc(E.number):t('newInvoice')}</h2>
-  <label>${t('clientLbl')}</label><select onchange="E.client_id=this.value;drawExpBox()">${cliOpts}</select>
+  <label>${t('clientLbl')}</label><select onchange="E.client_id=this.value;if(!E.id&&applyClientPreset())drawLines();drawExpBox()">${cliOpts}</select>
   <div class="row">
     <div><label>${t('numberLbl')}</label><input value="${esc(E.number)}" oninput="E.number=this.value; if(!editInvoice._touched){ E.pay_terms=termsFor(this.value); syncTerms(); }"></div>
     <div><label>${t('dateLbl')}</label><input type="date" value="${E.issue_date||''}" onchange="E.issue_date=this.value; drawDue()"></div>
@@ -729,6 +732,7 @@ function invoiceForm(){
   <label>${t('linesLbl')}</label>
   <div id="lines"></div>
   <button class="btn-g" style="margin-top:8px" onclick="E.lines.push({desc:'',qty:1,price:'',currency:'EUR'});drawLines()">${t('addLine')}</button>
+  <div id="preset-box"></div>
   <div id="exp-box"></div>
   <div class="row" style="margin-top:14px">
     <div><label style="margin-top:0">${t('vatLbl')}</label>
@@ -801,7 +805,7 @@ function drawLines(){
         <option ${l.currency!=='GBP'?'selected':''}>EUR</option>
         <option ${l.currency==='GBP'?'selected':''}>GBP</option></select></td>
       <td><button class="del-x" onclick="E.lines.splice(${i},1);drawLines()">✕</button></td></tr>`).join('')+`</table>`;
-  drawTotals(); drawExpBox();
+  drawTotals(); drawExpBox(); drawPresetBox();
 }
 function drawTotals(){
   const t = invTotals(E); const box = document.getElementById('totals'); let h='';
@@ -1357,6 +1361,22 @@ function rSettings(){
     <button class="btn-g" style="margin-top:12px" onclick="editBank(null)">${t('addBank')}</button>
   </div>
   <div class="card">
+    <h3 style="margin-bottom:4px">${t('presetsTitle')}</h3>
+    ${presets().length ? presets().map(p=>`<div class="card" style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(p.name)}</b>
+          <span style="font-size:12px;color:var(--tx2)">${t('presetLinesN').replace('{n}',(p.lines||[]).length)}</span></div>
+        <div style="font-size:12.5px;color:var(--tx2);margin-top:3px">${(p.lines||[]).map(l=>esc(l.desc)).join(' · ')}</div>
+        <label style="margin-top:8px">${t('presetAutoFor')}</label>
+        <select onchange="setPresetClient('${p.id}',this.value)">
+          <option value="" ${!p.client_id?'selected':''}>${t('presetNone')}</option>
+          ${S.clients.map(k=>`<option value="${k.id}" ${p.client_id===k.id?'selected':''}>${esc(k.company)}</option>`).join('')}</select>
+        <div class="row" style="margin-top:8px">
+          <button class="btn-g" onclick="renamePreset('${p.id}')">${t('presetRename')}</button>
+          <button class="btn-red" onclick="delPreset('${p.id}')">${t('presetDel')}</button></div></div>`).join('')
+      : `<p class="hint" style="margin-top:0">${t('presetsEmpty')}</p>`}
+    <p class="hint">${t('presetsHint')}</p>
+  </div>
+  <div class="card">
     <h3 style="margin-bottom:4px">${t('setExpTitle')}</h3>
     <label><input type="checkbox" style="width:auto;margin-right:8px" ${expInvOn()?'checked':''}
       onchange="saveExpInv(this.checked)">${t('setExpInv')}</label>
@@ -1373,11 +1393,75 @@ async function saveSettings(){
   const g = id=>document.getElementById(id).value;
   const rec = {user_id:S.user.id, business_name:g('st-name'), address:g('st-addr'),
     nif:g('st-nif'), iban:S.settings.iban||'', extra:g('st-extra'), default_vat:Number(g('st-vat'))||0,
-    exp_invoice:expInvOn(), updated_at:new Date().toISOString()};
+    exp_invoice:expInvOn(), line_presets:presets(), updated_at:new Date().toISOString()};
   let mode;
   try{ mode = await dbWrite('inv_settings','upsert',rec,S.user.id); }
   catch(e){ toast('Erro: '+(e.message||e)); return; }
   if(mode==='online') toast(t('savedSet'));
+}
+// ---------- LINHAS PREDEFINIDAS ----------
+const presets = () => (S.settings && Array.isArray(S.settings.line_presets)) ? S.settings.line_presets : [];
+const cleanLines = ls => (ls||[]).filter(l=>!l.exp_id && ((l.desc||'').trim() || (l.price!=='' && l.price!=null)))
+  .map(l=>({desc:l.desc||'', qty:(l.qty===''||l.qty==null)?1:l.qty, price:(l.price==null?'':l.price), currency:l.currency==='GBP'?'GBP':'EUR'}));
+const linesBlank = ls => !cleanLines(ls).length;
+// fatura nova: põe as linhas do cliente; troca se mudares de cliente e ainda não mexeste nelas
+function applyClientPreset(){
+  const p = presets().find(x=>x.client_id && x.client_id===E.client_id);
+  const untouched = E._autoPreset && JSON.stringify(cleanLines(E.lines))===E._autoPreset;
+  if(!linesBlank(E.lines) && !untouched) return false;
+  const keepExp = (E.lines||[]).filter(l=>l.exp_id);
+  if(!p){ if(!untouched) return false;
+    E.lines = [{desc:'',qty:1,price:'',currency:'EUR'}, ...keepExp]; E._autoPreset = null; return true; }
+  E.lines = [...JSON.parse(JSON.stringify(p.lines)), ...keepExp];
+  E._autoPreset = JSON.stringify(cleanLines(E.lines));
+  return true;
+}
+function drawPresetBox(){
+  const el = document.getElementById('preset-box'); if(!el || !E) return;
+  const ps = presets();
+  el.innerHTML = (ps.length ? `<select style="margin-top:8px" onchange="if(this.value){usePreset(this.value);}">
+      <option value="">${t('presetPick')}</option>
+      ${ps.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>` : '')
+    + `<button class="btn-g" style="margin-top:8px" onclick="savePresetFromInvoice()">${t('presetSave')}</button>`;
+}
+function usePreset(pid){
+  const p = presets().find(x=>x.id===pid); if(!p) return;
+  const keepExp = (E.lines||[]).filter(l=>l.exp_id);
+  const own = (E.lines||[]).filter(l=>!l.exp_id);
+  E.lines = [...(linesBlank(own) ? [] : own), ...JSON.parse(JSON.stringify(p.lines)), ...keepExp];
+  drawLines();
+}
+async function writePresets(list){
+  const rec = {...S.settings, user_id:S.user.id, line_presets:list, updated_at:new Date().toISOString()};
+  return dbWrite('inv_settings','upsert',rec,S.user.id);
+}
+async function savePresetFromInvoice(){
+  const lines = cleanLines(E.lines);
+  if(!lines.length){ toast(t('presetNoLines')); return; }
+  const c = clientOf(E);
+  const name = (prompt(t('presetName'), c ? c.company : '')||'').trim(); if(!name) return;
+  let list = presets().slice();
+  const same = list.find(p=>p.name.toLowerCase()===name.toLowerCase());
+  if(same && !confirm(t('presetOverwrite').replace('{n}',same.name))) return;
+  const auto = !!c && confirm(t('presetAuto').replace('{c}', c.company));
+  if(auto) list = list.map(p=>p.client_id===c.id ? {...p, client_id:null} : p);
+  const rec = {id: same ? same.id : newId(), name, client_id: auto ? c.id : (same ? same.client_id : null), lines};
+  list = same ? list.map(p=>p.id===same.id ? rec : p) : [...list, rec];
+  try{ const mode = await writePresets(list); drawPresetBox(); if(mode==='online') toast(t('presetSaved')); }
+  catch(e){ toast('Erro: '+(e.message||e)); }
+}
+async function setPresetClient(pid, cid){
+  const list = presets().map(p=> p.id===pid ? {...p, client_id:cid||null} : (cid && p.client_id===cid ? {...p, client_id:null} : p));
+  try{ await writePresets(list); render(); }catch(e){ toast('Erro: '+(e.message||e)); }
+}
+async function renamePreset(pid){
+  const p = presets().find(x=>x.id===pid); if(!p) return;
+  const name = (prompt(t('presetName'), p.name)||'').trim(); if(!name) return;
+  try{ await writePresets(presets().map(x=>x.id===pid?{...x,name}:x)); render(); }catch(e){ toast('Erro: '+(e.message||e)); }
+}
+async function delPreset(pid){
+  if(!confirm(t('presetConfirmDel'))) return;
+  try{ await writePresets(presets().filter(x=>x.id!==pid)); render(); }catch(e){ toast('Erro: '+(e.message||e)); }
 }
 async function saveExpInv(on){
   const rec = {...S.settings, user_id:S.user.id, exp_invoice:!!on, updated_at:new Date().toISOString()};
